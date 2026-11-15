@@ -20,50 +20,50 @@ with. Keep "Claude" out of the title for the same reason; naming it in the descr
 ## Short description (max 80)
 
 ```
-Let Claude read and edit your AnkiDroid cards via the AnkiMCP tunnel or Wi-Fi.
+Let Claude, ChatGPT, Gemini or Grok read and edit your AnkiDroid cards.
 ```
 
 ## Full description (max 4000)
 
 ```
-AnkiMCP connects Claude to the AnkiDroid collection on your phone. Claude reads and edits it straight through AnkiDroid, without a computer running Anki.
+AnkiMCP connects AI assistants such as Claude, ChatGPT, Gemini and Grok to the AnkiDroid collection on your phone. It reads and edits it straight through AnkiDroid, without a computer running Anki.
 
 How it works
-The app uses AnkiDroid's official API and answers Claude's requests that reach it through the AnkiMCP tunnel. The phone only opens an outgoing connection; no ports are opened on it (unless you turn on the Wi-Fi server below). Your collection stays in AnkiDroid: nothing is copied to a server, and only the answer to each request leaves the phone.
+The app uses AnkiDroid's official API and answers the assistant's requests that reach it through the AnkiMCP tunnel. The phone only opens an outgoing connection; no ports are opened on it (unless you turn on the Wi-Fi server below). Your collection stays in AnkiDroid: nothing is copied to a server, and only the answer to each request leaves the phone.
 
-What Claude can do
+What the assistant can do
 Read decks and due counts; search and read notes; add, edit and delete notes; create decks; manage tags; flag, suspend, bury and move cards; work with note types; study with you and record your ratings; ask you to sync (you tap a notification). Each change is read back from AnkiDroid to check it.
 
 What you need
 - AnkiDroid 2.24 or newer, opened once, with its API enabled (Settings > Advanced > Enable AnkiDroid API; on by default).
 - An AnkiMCP account (https://ankimcp.ai), the same one you use with the desktop add-on. You sign in once in the browser with a short code; the app never sees your password.
-- Claude with a custom connector: open Settings > Connectors > Add custom connector, paste the MCP server URL the app shows (Copy URL), and sign in with the same AnkiMCP account.
+- An AI assistant with custom connectors (remote MCP): add one, paste the MCP server URL the app shows (Copy URL), and sign in with the same AnkiMCP account.
 - Android 8.0 or newer. Google Play services for on-demand wake-ups.
-- Optional: Plus or Pro, monthly subscriptions sold through Google Play in the app.
+- Optional: Plus or Pro, monthly or yearly subscriptions sold through Google Play in the app.
 
 No account? Use it on your Wi-Fi
-The app can also work entirely on your Wi-Fi, for free and without an account: it serves MCP directly to Claude Desktop or Claude Code on a computer on the same network. Turn on "Local server (Wi-Fi)" on the Local tab and share the address the app shows to the computer. It is open to anyone on that Wi-Fi unless you turn on "Require access token", and uses plain HTTP without encryption, so use it on a network you trust. Claude on the web can't reach your phone this way. While it is on, the app shows a notification; turn battery optimisation off for the app (the Battery card links to the setting), because nothing can wake the phone in this mode.
+The app can also work entirely on your Wi-Fi, for free and without an account: it serves MCP directly to an MCP client such as Claude Desktop or Claude Code on a computer on the same network. Turn on "Local server (Wi-Fi)" on the Local tab and give the computer the address it shows. It is open to anyone on that Wi-Fi unless you turn on "Require access token", and uses plain HTTP without encryption, so use it on a network you trust. Assistants on the web can't reach your phone this way. While it is on, the app shows a notification; turn battery optimisation off for the app (the Battery card links to the setting), because nothing can wake the phone in this mode.
 
 How it connects
-When Claude needs your decks and the phone is not connected, AnkiMCP sends a push message and the app connects. It disconnects again when the screen turns off, or after 15, 30 or 60 minutes without requests (you choose). Claude's next request wakes the phone again. Nothing runs in the background between requests.
+When the assistant needs your decks and the phone is not connected, AnkiMCP sends a push message and the app connects. It disconnects again when the screen turns off, or after 15, 30 or 60 minutes without requests (you choose). The next request wakes the phone again. Nothing runs in the background between requests.
 While connected, a notification with a Disconnect button is shown.
 
 Battery and background limits
-Realme, Oppo and OnePlus (ColorOS), Xiaomi, Redmi and Poco (MIUI/HyperOS), Vivo and iQOO, and Huawei and Honor phones freeze background apps, even ones that show a notification. When that happens, Claude's requests arrive late or not at all. On these phones, allow background activity and set battery optimisation to "Don't optimise" for both AnkiMCP and AnkiDroid. The app shows where the setting is on your phone.
+Many phones (Xiaomi, Oppo, Realme, OnePlus, Vivo, Huawei, Honor) freeze background apps, even ones that show a notification. When that happens, requests arrive late or not at all. On these phones, allow background activity and set battery optimisation to "Don't optimise" for both AnkiMCP and AnkiDroid. The app shows where the setting is on your phone.
 
 Privacy
-- Claude's requests and the app's answers (for example deck names and due counts) pass through the AnkiMCP tunnel. AnkiMCP does not store deck data beyond the request in flight. What Claude does with the answer is covered by your agreement with Anthropic.
+- The assistant's requests and the app's answers (for example deck names and due counts) pass through the AnkiMCP tunnel. AnkiMCP does not store deck data beyond the request in flight. What the assistant does with the answer is covered by your agreement with its provider.
 - A push token is registered with AnkiMCP so it can wake the phone. Signing out removes it.
 - No ads, no analytics, no crash reporting.
 Privacy policy: https://ankimcp.ai/privacy/
 
 Problems?
-Open the Log tab and tap Share log. The shared text includes the app version, Android version and phone model, but not your email, and anything that looks like a token is removed. Post it with a short description at https://forum.ankimcp.ai. Service status: https://status.ankimcp.ai
+Open the Log tab and tap Share log. It includes app and Android versions and phone model, not your email; tokens are removed. Post it with a short description at https://forum.ankimcp.ai. Service status: https://status.ankimcp.ai
 
 Open source
 AnkiMCP is free software under the GNU AGPL-3.0. Source code: https://github.com/ankimcp/ankidroid-mcp
 
-AnkiMCP is not affiliated with or endorsed by AnkiDroid, Anki or Anthropic. Claude is a trademark of Anthropic.
+AnkiMCP is not affiliated with or endorsed by AnkiDroid, Anki or any AI provider. Claude, ChatGPT, Gemini and Grok are trademarks of their respective owners.
 ```
 
 ## Store settings
