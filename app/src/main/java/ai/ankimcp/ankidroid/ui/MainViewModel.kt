@@ -2,6 +2,7 @@ package ai.ankimcp.ankidroid.ui
 
 import ai.ankimcp.ankidroid.anki.FlashcardApp
 import ai.ankimcp.ankidroid.anki.FlashcardAppState
+import ai.ankimcp.ankidroid.anki.ProviderTrust
 import ai.ankimcp.ankidroid.appGraph
 import ai.ankimcp.ankidroid.auth.AuthException
 import ai.ankimcp.ankidroid.auth.DeviceFlowClient
@@ -51,7 +52,8 @@ import java.io.File
 data class EnvironmentStatus(
     /** The flashcard app in use, or why none is (D65). */
     val flashcardApp: FlashcardAppState,
-    val ankiInstalled: Boolean,
+    /** Whether the app in use is ready, or why AnkiDroid is not used (D66). */
+    val ankiTrust: ProviderTrust,
     val ankiPermissionGranted: Boolean,
     val batteryUnrestricted: Boolean,
     /** POST_NOTIFICATIONS (Android 13+); what the runtime permission request can change. */
@@ -59,6 +61,8 @@ data class EnvironmentStatus(
     /** The permission, the app's notification switch and every channel are on. */
     val notificationsShown: Boolean,
 ) {
+    val ankiInstalled: Boolean get() = ankiTrust == ProviderTrust.Trusted
+
     val ankiReady: Boolean get() = ankiInstalled && ankiPermissionGranted
 
     val readyFlashcardApp: FlashcardApp? get() = (flashcardApp as? FlashcardAppState.Ready)?.app
@@ -467,7 +471,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val power = app.getSystemService(PowerManager::class.java)
         return EnvironmentStatus(
             flashcardApp = graph.flashcardApps.resolve(),
-            ankiInstalled = graph.ankiAvailability.isInstalled(),
+            ankiTrust = graph.ankiAvailability.trust(),
             ankiPermissionGranted = graph.ankiAvailability.hasPermission(),
             batteryUnrestricted = power.isIgnoringBatteryOptimizations(app.packageName),
             notificationsGranted = hasNotificationPermission(app),

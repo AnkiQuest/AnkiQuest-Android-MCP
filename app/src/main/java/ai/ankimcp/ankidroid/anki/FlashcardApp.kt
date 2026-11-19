@@ -28,15 +28,6 @@ enum class FlashcardApp(val packageName: String, val authority: String, val perm
     }
 }
 
-/** What PackageManager says about a package; the Android side is `AndroidInstalledApps`. */
-interface InstalledApps {
-    /** SHA-256 hex of the package's signing certificates (with rotation history), or null if not installed. */
-    fun signerDigests(packageName: String): Set<String>?
-
-    /** The package that holds [authority], or null if none does. */
-    fun authorityHolder(authority: String): String?
-}
-
 /** Which flashcard app is used, if any (D65). */
 sealed interface FlashcardAppState {
     /** Installed apps that hold their own authority: what the picker lists. */

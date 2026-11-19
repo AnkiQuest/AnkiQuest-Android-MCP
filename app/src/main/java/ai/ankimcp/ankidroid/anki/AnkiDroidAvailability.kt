@@ -1,6 +1,7 @@
 package ai.ankimcp.ankidroid.anki
 
 import android.content.Context
+import android.content.pm.ApplicationInfo
 import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
 import android.os.Build
@@ -40,7 +41,10 @@ data class RequiredVersion(val code: Long, val label: String) {
  * version, and whether we hold its database permission.
  */
 interface AnkiDroidAvailability {
-    fun isInstalled(): Boolean
+    /** Whether the provider is genuine AnkiDroid's (D66); only [ProviderTrust.Trusted] counts as installed. */
+    fun trust(): ProviderTrust
+
+    fun isInstalled(): Boolean = trust() == ProviderTrust.Trusted
 
     fun hasPermission(): Boolean
 
@@ -48,12 +52,22 @@ interface AnkiDroidAvailability {
     fun version(): AnkiDroidVersion?
 }
 
-/** Resolves the app on each check, so a changed certificate or authority is caught before each use. */
+/**
+ * Resolves the app on each check, so a changed certificate or authority is caught before each use.
+ * [check] says why AnkiDroid is not used when no app is ready (D66).
+ */
 class AndroidAnkiDroidAvailability(
     private val context: Context,
     private val apps: FlashcardAppResolver,
 ) : AnkiDroidAvailability {
-    override fun isInstalled(): Boolean = ready() != null
+    private val check = AnkiDroidCheck(AndroidInstalledApps(context), appBuild(context))
+
+    override fun trust(): ProviderTrust {
+        if (ready() != null) {
+            return ProviderTrust.Trusted
+        }
+        return check.trust().takeUnless { it == ProviderTrust.Trusted } ?: ProviderTrust.NotInstalled
+    }
 
     override fun hasPermission(): Boolean {
         val app = ready() ?: return false
@@ -100,6 +114,12 @@ class AndroidInstalledApps(context: Context) : InstalledApps {
 
     private fun sha256(bytes: ByteArray): String =
         MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
+}
+
+/** This app's own build: debuggable builds also accept a self-built AnkiDroid (D66). */
+private fun appBuild(context: Context): AppBuild {
+    val debuggable = context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0
+    return if (debuggable) AppBuild.Debuggable else AppBuild.Release
 }
 
 private fun packageInfo(pm: PackageManager, packageName: String, flags: Int): PackageInfo? = try {

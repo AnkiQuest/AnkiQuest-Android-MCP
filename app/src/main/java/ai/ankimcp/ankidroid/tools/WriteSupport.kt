@@ -22,7 +22,8 @@ internal fun tooMany(count: Int, unit: String = "notes"): Nothing = fail(
 internal fun AnkiResult.Failure.notSent(): Boolean =
     this is AnkiResult.NotSent || this is AnkiResult.TooSlow || this is AnkiResult.NotResponding ||
         this is AnkiResult.Busy || this is AnkiResult.Frozen || this is AnkiResult.Outdated ||
-        this is AnkiResult.NotInstalled || this is AnkiResult.PermissionDenied
+        this is AnkiResult.NotInstalled || this is AnkiResult.Untrusted ||
+        this is AnkiResult.PermissionDenied
 
 /**
  * The value of a read that confirms a write AnkiDroid accepted. A failure here ends the call

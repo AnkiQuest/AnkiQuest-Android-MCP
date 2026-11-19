@@ -2274,6 +2274,40 @@ computer on the same Wi-Fi; claude.ai cannot reach a LAN address. Code in `local
     uninstalled choice, changed certificate, changed AnkiDroid certificate, rotation, authority
     held by another package). The PackageManager adapter and the picker are not JVM-tested.
 
+## AnkiDroid provider check
+
+- **D66. AnkiDroid's provider is used only when it is genuine AnkiDroid's.** Apps that talk to
+  AnkiDroid's provider trust that it is AnkiDroid. Android lets any app declare the
+  `com.ichi2.anki.flashcards` authority while AnkiDroid is not installed, and an app can be
+  installed under the `com.ichi2.anki` package name when AnkiDroid is not. Either would then
+  receive this app's reads and writes. The check (`anki/AnkiDroidCheck`, plain Kotlin):
+  - `resolveContentProvider("com.ichi2.anki.flashcards")` must name `com.ichi2.anki`.
+  - One of that package's signer digests must be the SHA-256 of AnkiDroid's release
+    certificate (CN=Nicolas Raoul, O=http://nrw.free.fr; Google Play and GitHub releases),
+    built into the app. API 28+ reads `signingInfo` (`apkContentsSigners` with several signers,
+    else `signingCertificateHistory`, so the release key still matches after a key rotation);
+    older versions read `signatures`. Built in rather than trusted on first use, so an app
+    installed under AnkiDroid's name before AnkiDroid is never trusted.
+  - A debuggable build of this app (`ApplicationInfo.FLAG_DEBUGGABLE`) also accepts any
+    certificate on `com.ichi2.anki`, for development against a self-built AnkiDroid. The
+    authority check still applies. Release builds never do.
+  - Checked before each use: every repository precheck, each screen refresh, before acquiring
+    the held provider client and before each resolver call. A package that fails counts as
+    AnkiDroid not installed (`isInstalled()` false, `version()` null). The tools then answer
+    `AnkiResult.Untrusted` ("not an AnkiDroid release ... install AnkiDroid from Google Play or
+    its GitHub releases"), and onboarding step 1 says the same instead of "not installed".
+    A held client is not re-checked per call: it is a binder to the process that passed the
+    check, and it dies with that process.
+  - No new permissions or `<queries>`: `com.ichi2.anki` is already declared, and resolving an
+    authority needs no visibility of other packages.
+  - Not covered: the sync notification's intent (D58) still targets the `com.ichi2.anki`
+    package without the check; it carries no data.
+  - Tests (JVM): `AnkiDroidCheckTest` (genuine; digest letter case; not installed; authority
+    squatted while AnkiDroid is missing; another package holds the authority, also when
+    debuggable; AnkiDroid without its provider; unknown certificate; no certificates; unknown
+    certificate accepted when debuggable; rotated key with the release key in its history).
+    The PackageManager adapter is not JVM-tested.
+
 ## Not done
 
 - D62 (Google Play Billing): JVM-tested only, with fake Play and MockWebServer. Not yet run
