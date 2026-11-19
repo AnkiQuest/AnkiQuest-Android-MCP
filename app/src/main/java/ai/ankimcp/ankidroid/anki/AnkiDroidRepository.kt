@@ -159,6 +159,13 @@ sealed interface AnkiResult<out T> {
             "and open it once, then try again."
     }
 
+    /** `com.ichi2.anki` is installed, but its provider is not genuine AnkiDroid's (D66). */
+    data object Untrusted : Failure {
+        override val message = "The app installed as AnkiDroid on this phone is not an AnkiDroid release " +
+            "(it is not signed with AnkiDroid's key, or another app holds AnkiDroid's data provider), so " +
+            "AnkiMCP does not use it. Install AnkiDroid from Google Play or its GitHub releases, then try again."
+    }
+
     data object PermissionDenied : Failure {
         override val message = "The AnkiMCP app on this phone does not have permission to access AnkiDroid. " +
             "Open it and grant the AnkiDroid database permission."
@@ -703,7 +710,11 @@ class AnkiDroidRepository(
 
     /** Install, permission and (unless [minVersion] is null) version checks shared by reads and writes. */
     private fun precheck(minVersion: RequiredVersion?): AnkiResult.Failure? {
-        if (!availability.isInstalled()) return AnkiResult.NotInstalled
+        when (availability.trust()) {
+            ProviderTrust.Trusted -> {}
+            ProviderTrust.NotInstalled -> return AnkiResult.NotInstalled
+            ProviderTrust.OtherHolder, ProviderTrust.UnknownSigner -> return AnkiResult.Untrusted
+        }
         if (!availability.hasPermission()) return AnkiResult.PermissionDenied
         if (minVersion != null) {
             val version = availability.version() ?: return AnkiResult.NotInstalled

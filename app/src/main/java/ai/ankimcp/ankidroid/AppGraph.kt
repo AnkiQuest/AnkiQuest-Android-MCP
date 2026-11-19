@@ -213,7 +213,12 @@ class AppGraph(context: Context) {
     val ankiAvailability: AnkiDroidAvailability = AndroidAnkiDroidAvailability(appContext)
 
     val ankiRepository = AnkiDroidRepository(
-        provider = ContentResolverAnkiProvider(appContext.contentResolver, log, AndroidElapsedClock),
+        provider = ContentResolverAnkiProvider(
+            appContext.contentResolver,
+            trusted = { ankiAvailability.isInstalled() },
+            log = log,
+            clock = AndroidElapsedClock,
+        ),
         availability = ankiAvailability,
         providerExecutor = AnkiDroidRepository.newProviderExecutor(),
         log = log,

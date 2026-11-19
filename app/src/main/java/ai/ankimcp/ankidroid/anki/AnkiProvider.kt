@@ -207,14 +207,25 @@ internal fun readRows(cursor: Cursor): List<ProviderRow> =
         rows
     }
 
+/**
+ * [trusted] says whether the authority is genuine AnkiDroid's (D66): no client is acquired and no
+ * resolver call is made while it is not, so a call never reaches an app squatting the authority.
+ */
 class ContentResolverAnkiProvider(
     resolver: ContentResolver,
+    trusted: () -> Boolean,
     log: TunnelLog,
     clock: ElapsedClock,
 ) : AnkiProvider by EndpointAnkiProvider<ContentProviderClient>(
-    acquire = { resolver.acquireUnstableContentProviderClient(FlashCardsContract.AUTHORITY) },
+    acquire = {
+        if (trusted()) {
+            resolver.acquireUnstableContentProviderClient(FlashCardsContract.AUTHORITY)
+        } else {
+            null
+        }
+    },
     endpointOf = ::ClientEndpoint,
-    resolver = ResolverEndpoint(resolver),
+    resolver = ResolverEndpoint(resolver, trusted),
     log = log,
     clock = clock,
 )
@@ -240,19 +251,27 @@ private class ClientEndpoint(private val client: ContentProviderClient) : Provid
     }
 }
 
-private class ResolverEndpoint(private val resolver: ContentResolver) : ProviderEndpoint {
-    override fun query(path: String, projection: Array<String>?, selection: String?, args: Array<String>?, sortOrder: String?) =
-        resolver.query(uriOf(path), projection, selection, args, sortOrder)
+private class ResolverEndpoint(private val resolver: ContentResolver, private val trusted: () -> Boolean) : ProviderEndpoint {
+    /** The path's URI, checked right before the call; an untrusted provider fails it as a permission error. */
+    private fun trustedUri(path: String): Uri {
+        if (!trusted()) {
+            throw SecurityException("AnkiDroid's provider is not AnkiDroid's own (D66)")
+        }
+        return uriOf(path)
+    }
 
-    override fun insert(path: String, values: Map<String, Any?>) = resolver.insert(uriOf(path), contentValues(values))?.toString()
+    override fun query(path: String, projection: Array<String>?, selection: String?, args: Array<String>?, sortOrder: String?) =
+        resolver.query(trustedUri(path), projection, selection, args, sortOrder)
+
+    override fun insert(path: String, values: Map<String, Any?>) = resolver.insert(trustedUri(path), contentValues(values))?.toString()
 
     override fun update(path: String, values: Map<String, Any?>, selection: String?, args: Array<String>?) =
-        resolver.update(uriOf(path), contentValues(values), selection, args)
+        resolver.update(trustedUri(path), contentValues(values), selection, args)
 
-    override fun delete(path: String, selection: String?, args: Array<String>?) = resolver.delete(uriOf(path), selection, args)
+    override fun delete(path: String, selection: String?, args: Array<String>?) = resolver.delete(trustedUri(path), selection, args)
 
     override fun bulkInsert(path: String, rows: List<Map<String, Any?>>) =
-        resolver.bulkInsert(uriOf(path), rows.map(::contentValues).toTypedArray())
+        resolver.bulkInsert(trustedUri(path), rows.map(::contentValues).toTypedArray())
 }
 
 private fun uriOf(path: String): Uri = "content://${FlashCardsContract.AUTHORITY}/$path".toUri()

@@ -2,6 +2,7 @@ package ai.ankimcp.ankidroid.ui
 
 import ai.ankimcp.ankidroid.R
 import ai.ankimcp.ankidroid.anki.AnkiDroidAvailability
+import ai.ankimcp.ankidroid.anki.ProviderTrust
 import ai.ankimcp.ankidroid.service.FreezingOem
 import android.content.ActivityNotFoundException
 import android.content.Context
@@ -58,7 +59,12 @@ fun OnboardingScreen(
             title = "1. AnkiDroid",
             done = environment.ankiInstalled,
             doneText = "AnkiDroid is installed.",
-            todoText = "AnkiDroid is not installed. Install it, open it once to finish its setup, then come back.",
+            todoText = if (environment.ankiTrust == ProviderTrust.NotInstalled) {
+                "AnkiDroid is not installed. Install it, open it once to finish its setup, then come back."
+            } else {
+                "The installed AnkiDroid is not an AnkiDroid release, so AnkiMCP does not use it. Install " +
+                    "AnkiDroid from Google Play or its GitHub releases, then come back."
+            },
         ) {
             Button(onClick = { openPlayStore(context, "com.ichi2.anki") }) { Text("Install AnkiDroid") }
         }
