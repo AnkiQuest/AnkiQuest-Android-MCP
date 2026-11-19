@@ -32,6 +32,11 @@ class AnkiDroidCheckTest {
     }
 
     @Test
+    fun `AnkiDroid from F-Droid is trusted`() {
+        assertEquals(ProviderTrust.Trusted, trust(ankiDroid(FDROID)))
+    }
+
+    @Test
     fun `not installed`() {
         assertEquals(ProviderTrust.NotInstalled, trust(FakeInstalledApps()))
     }
@@ -89,6 +94,7 @@ class AnkiDroidCheckTest {
         const val AUTHORITY = "com.ichi2.anki.flashcards"
         const val SQUATTER = "com.example.squatter"
         const val RELEASE = "2071534f0f4b5e54ae952dd275d70da6e3459ee69909d2ab1b4843c4c5b21a45"
+        const val FDROID = "24a3d4756c62dd69c86df69aa7fa327b2a6bf55f55c4a1749f99bd1da75906bb"
         const val OTHER_KEY = "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff"
         const val ROTATED_KEY = "ffeeddccbbaa99887766554433221100ffeeddccbbaa99887766554433221100"
     }

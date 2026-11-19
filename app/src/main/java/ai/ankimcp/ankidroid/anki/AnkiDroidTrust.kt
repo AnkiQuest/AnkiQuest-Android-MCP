@@ -41,8 +41,8 @@ class AnkiDroidCheck(private val installed: InstalledApps, private val build: Ap
             return ProviderTrust.OtherHolder
         }
 
-        // The release key, current or earlier in the rotation history.
-        if (digests.any { it.equals(RELEASE_CERT_SHA256, ignoreCase = true) }) {
+        // A release key, current or earlier in the rotation history.
+        if (digests.any { digest -> RELEASE_CERTS.any { it.equals(digest, ignoreCase = true) } }) {
             return ProviderTrust.Trusted
         }
 
@@ -59,5 +59,14 @@ class AnkiDroidCheck(private val installed: InstalledApps, private val build: Ap
          * used for its Google Play and GitHub releases.
          */
         const val RELEASE_CERT_SHA256 = "2071534F0F4B5E54AE952DD275D70DA6E3459EE69909D2AB1B4843C4C5B21A45"
+
+        /**
+         * SHA-256 of the certificate F-Droid signs its own AnkiDroid builds with (read from
+         * com.ichi2.anki_225033004.apk on f-droid.org).
+         */
+        const val FDROID_CERT_SHA256 = "24A3D4756C62DD69C86DF69AA7FA327B2A6BF55F55C4A1749F99BD1DA75906BB"
+
+        /** Every key a released AnkiDroid is signed with. */
+        val RELEASE_CERTS = setOf(RELEASE_CERT_SHA256, FDROID_CERT_SHA256)
     }
 }
