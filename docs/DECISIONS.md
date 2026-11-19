@@ -2231,6 +2231,49 @@ computer on the same Wi-Fi; claude.ai cannot reach a LAN address. Code in `local
     id_token survives a refresh without one), `LogReportTest` (`id_token_hint=` redacted).
     `MainViewModel` has no JVM harness, so setting the URL and the Custom Tab are untested.
 
+## Flashcard app
+
+- **D65. AnkiQuest is a second known flashcard app, used only when the user picks it.**
+  AnkiQuest (`dev.hilll.anki`) is a fork of AnkiDroid with the same provider code under its own
+  package, authority (`dev.hilll.anki.flashcards`) and permission
+  (`dev.hilll.anki.permission.READ_WRITE_DATABASE`). An AnkiDroid maintainer objected to
+  discovering any app that declares the provider: apps trust AnkiDroid, so support has to add
+  protection, not less. The design:
+  - Closed list: `anki/FlashcardApp` names AnkiDroid and AnkiQuest. No other app is ever used,
+    whatever provider it declares.
+  - AnkiDroid is the default and is used without asking, as before; with AnkiDroid installed
+    and AnkiQuest not, nothing changes on screen.
+  - AnkiQuest only after the user picks it in the "Flashcard app" picker: step 1 of onboarding
+    when a choice exists (AnkiDroid missing, or both installed), and a Status card while both
+    are installed. It lists the installed known apps by their own label and icon. Picking one
+    requests that app's runtime permission, so Android's dialog, which the app cannot fake,
+    names it. The app never switches on its own.
+  - Certificate pinning (`FlashcardAppResolver`, `FlashcardAppChoice`): picking an app stores the
+    SHA-256 digests of its signing certificates; AnkiDroid's are stored on first use. Before
+    each use (every repository precheck, the sync intent, each screen refresh) the installed
+    package's digests must contain the pin. API 28+ reads `signingInfo`
+    (`apkContentsSigners` with several signers, else `signingCertificateHistory`, so a key
+    rotation keeps the pin); older versions read `signatures`. A changed certificate drops the
+    choice and its pin and falls back to AnkiDroid; a changed AnkiDroid certificate keeps the
+    old pin and asks until the user picks again, rather than re-pinning silently.
+  - Authority check: an app counts only when `resolveContentProvider(authority)` names its own
+    package, so an app holding `com.ichi2.anki.flashcards` while AnkiDroid is missing is never
+    used. This protects AnkiDroid users too.
+  - An uninstalled choice falls back to AnkiDroid, or to the picker or the install step.
+  - One abstraction: the package, authority and permission come from `FlashcardApp` everywhere
+    (availability, provider URIs, the held provider client, the sync intent, onboarding and
+    battery texts, manifest `<uses-permission>` and `<queries>`). The held client keeps the
+    authority it was acquired for, and picking an app releases it.
+  - Version gate: AnkiQuest's release version codes are `5nnnn000`, above every
+    `RequiredVersion`, and its provider matches the AnkiDroid release it is based on.
+  - Texts name the app in use in onboarding steps 1 and 2 and the battery card. They keep
+    "AnkiDroid" in the install step and in the tools' texts, including "Tap to sync AnkiDroid",
+    which the sync tool's description quotes; the notification and the tool would otherwise
+    disagree. With AnkiQuest in use these still say AnkiDroid.
+  - Tests (JVM): `FlashcardAppResolverTest` (none installed, AnkiDroid only, AnkiQuest only, both,
+    uninstalled choice, changed certificate, changed AnkiDroid certificate, rotation, authority
+    held by another package). The PackageManager adapter and the picker are not JVM-tested.
+
 ## Not done
 
 - D62 (Google Play Billing): JVM-tested only, with fake Play and MockWebServer. Not yet run

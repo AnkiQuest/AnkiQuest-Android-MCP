@@ -1,0 +1,194 @@
+package ai.ankimcp.ankidroid.anki
+
+import ai.ankimcp.ankidroid.anki.FlashcardApp.ANKIDROID
+import ai.ankimcp.ankidroid.anki.FlashcardApp.ANKIQUEST
+import ai.ankimcp.ankidroid.settings.InMemoryKeyValueStore
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+class FlashcardAppResolverTest {
+    /** Packages with their signer digests, and which package holds each authority. */
+    private class FakeInstalledApps : InstalledApps {
+        val signers = mutableMapOf<String, Set<String>>()
+        val authorities = mutableMapOf<String, String>()
+
+        fun install(app: FlashcardApp, cert: String = CERT_OF.getValue(app)) {
+            signers[app.packageName] = setOf(cert)
+            authorities[app.authority] = app.packageName
+        }
+
+        fun uninstall(app: FlashcardApp) {
+            signers.remove(app.packageName)
+            authorities.remove(app.authority)
+        }
+
+        override fun signerDigests(packageName: String): Set<String>? = signers[packageName]
+
+        override fun authorityHolder(authority: String): String? = authorities[authority]
+    }
+
+    private val installed = FakeInstalledApps()
+    private val store = InMemoryKeyValueStore()
+
+    private fun resolver() = FlashcardAppResolver(installed, FlashcardAppChoice(store))
+
+    @Test
+    fun `none installed`() {
+        assertEquals(FlashcardAppState.NoneInstalled, resolver().resolve())
+        assertNull(resolver().current)
+    }
+
+    @Test
+    fun `AnkiDroid only is used without asking and pinned on first use`() {
+        installed.install(ANKIDROID)
+        val resolver = resolver()
+
+        assertEquals(FlashcardAppState.Ready(ANKIDROID, listOf(ANKIDROID)), resolver.resolve())
+        assertEquals(ANKIDROID, resolver.current)
+        assertEquals(setOf(ANKIDROID_CERT), FlashcardAppChoice(store).pin(ANKIDROID))
+        assertNull(FlashcardAppChoice(store).chosen())
+    }
+
+    @Test
+    fun `AnkiQuest only needs an explicit choice`() {
+        installed.install(ANKIQUEST)
+        val resolver = resolver()
+
+        assertEquals(FlashcardAppState.NeedsChoice(listOf(ANKIQUEST)), resolver.resolve())
+        assertNull(resolver.current)
+
+        assertTrue(resolver.choose(ANKIQUEST))
+        assertEquals(FlashcardAppState.Ready(ANKIQUEST, listOf(ANKIQUEST)), resolver.resolve())
+        assertEquals(ANKIQUEST, resolver.current)
+    }
+
+    @Test
+    fun `both installed uses AnkiDroid until AnkiQuest is picked`() {
+        installed.install(ANKIDROID)
+        installed.install(ANKIQUEST)
+        val resolver = resolver()
+        val both = listOf(ANKIDROID, ANKIQUEST)
+
+        assertEquals(FlashcardAppState.Ready(ANKIDROID, both), resolver.resolve())
+
+        assertTrue(resolver.choose(ANKIQUEST))
+        assertEquals(FlashcardAppState.Ready(ANKIQUEST, both), resolver.resolve())
+
+        assertTrue(resolver.choose(ANKIDROID))
+        assertEquals(FlashcardAppState.Ready(ANKIDROID, both), resolver.resolve())
+    }
+
+    @Test
+    fun `an uninstalled choice falls back to AnkiDroid`() {
+        installed.install(ANKIDROID)
+        installed.install(ANKIQUEST)
+        val resolver = resolver()
+        resolver.choose(ANKIQUEST)
+
+        installed.uninstall(ANKIQUEST)
+
+        assertEquals(FlashcardAppState.Ready(ANKIDROID, listOf(ANKIDROID)), resolver.resolve())
+        assertNull(FlashcardAppChoice(store).chosen())
+        assertNull(FlashcardAppChoice(store).pin(ANKIQUEST))
+    }
+
+    @Test
+    fun `an uninstalled choice without AnkiDroid leaves nothing installed`() {
+        installed.install(ANKIQUEST)
+        val resolver = resolver()
+        resolver.choose(ANKIQUEST)
+
+        installed.uninstall(ANKIQUEST)
+
+        assertEquals(FlashcardAppState.NoneInstalled, resolver.resolve())
+        assertNull(resolver.current)
+    }
+
+    @Test
+    fun `a changed certificate resets the choice`() {
+        installed.install(ANKIQUEST)
+        val resolver = resolver()
+        resolver.choose(ANKIQUEST)
+
+        installed.install(ANKIQUEST, cert = OTHER_CERT)
+
+        assertEquals(FlashcardAppState.NeedsChoice(listOf(ANKIQUEST)), resolver.resolve())
+        assertNull(FlashcardAppChoice(store).chosen())
+        assertNull(resolver.current)
+
+        // Picking it again pins the new certificate.
+        assertTrue(resolver.choose(ANKIQUEST))
+        assertEquals(FlashcardAppState.Ready(ANKIQUEST, listOf(ANKIQUEST)), resolver.resolve())
+    }
+
+    @Test
+    fun `a changed AnkiDroid certificate asks again instead of re-pinning`() {
+        installed.install(ANKIDROID)
+        val resolver = resolver()
+        resolver.resolve()
+
+        installed.install(ANKIDROID, cert = OTHER_CERT)
+
+        assertEquals(FlashcardAppState.NeedsChoice(listOf(ANKIDROID)), resolver.resolve())
+        assertEquals(FlashcardAppState.NeedsChoice(listOf(ANKIDROID)), resolver.resolve())
+        assertEquals(setOf(ANKIDROID_CERT), FlashcardAppChoice(store).pin(ANKIDROID))
+
+        assertTrue(resolver.choose(ANKIDROID))
+        assertEquals(FlashcardAppState.Ready(ANKIDROID, listOf(ANKIDROID)), resolver.resolve())
+    }
+
+    @Test
+    fun `a rotated certificate keeps the pin while the old one is in the history`() {
+        installed.install(ANKIDROID)
+        val resolver = resolver()
+        resolver.resolve()
+
+        installed.signers[ANKIDROID.packageName] = setOf(ANKIDROID_CERT, OTHER_CERT)
+
+        assertEquals(FlashcardAppState.Ready(ANKIDROID, listOf(ANKIDROID)), resolver.resolve())
+    }
+
+    @Test
+    fun `an authority held by another package is rejected`() {
+        // AnkiDroid is missing and another app squats its authority.
+        installed.authorities[ANKIDROID.authority] = SQUATTER
+        installed.signers[SQUATTER] = setOf(OTHER_CERT)
+
+        assertEquals(FlashcardAppState.NoneInstalled, resolver().resolve())
+        assertFalse(resolver().choose(ANKIDROID))
+    }
+
+    @Test
+    fun `an installed app whose authority another package holds is rejected`() {
+        installed.install(ANKIDROID)
+        installed.install(ANKIQUEST)
+        installed.authorities[ANKIQUEST.authority] = SQUATTER
+        val resolver = resolver()
+
+        assertEquals(FlashcardAppState.Ready(ANKIDROID, listOf(ANKIDROID)), resolver.resolve())
+        assertFalse(resolver.choose(ANKIQUEST))
+    }
+
+    @Test
+    fun `a pinned choice whose authority is taken over falls back to AnkiDroid`() {
+        installed.install(ANKIDROID)
+        installed.install(ANKIQUEST)
+        val resolver = resolver()
+        resolver.choose(ANKIQUEST)
+
+        installed.authorities[ANKIQUEST.authority] = SQUATTER
+
+        assertEquals(FlashcardAppState.Ready(ANKIDROID, listOf(ANKIDROID)), resolver.resolve())
+    }
+
+    private companion object {
+        const val ANKIDROID_CERT = "a1"
+        const val ANKIQUEST_CERT = "b2"
+        const val OTHER_CERT = "c3"
+        const val SQUATTER = "com.example.squatter"
+        val CERT_OF = mapOf(ANKIDROID to ANKIDROID_CERT, ANKIQUEST to ANKIQUEST_CERT)
+    }
+}

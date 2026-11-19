@@ -1,6 +1,7 @@
 package ai.ankimcp.ankidroid.ui
 
-import ai.ankimcp.ankidroid.anki.AnkiDroidAvailability
+import ai.ankimcp.ankidroid.anki.FlashcardApp
+import ai.ankimcp.ankidroid.anki.FlashcardAppState
 import ai.ankimcp.ankidroid.appGraph
 import ai.ankimcp.ankidroid.auth.AuthException
 import ai.ankimcp.ankidroid.auth.DeviceFlowClient
@@ -48,6 +49,8 @@ import kotlinx.coroutines.withContext
 import java.io.File
 
 data class EnvironmentStatus(
+    /** The flashcard app in use, or why none is (D65). */
+    val flashcardApp: FlashcardAppState,
     val ankiInstalled: Boolean,
     val ankiPermissionGranted: Boolean,
     val batteryUnrestricted: Boolean,
@@ -57,6 +60,8 @@ data class EnvironmentStatus(
     val notificationsShown: Boolean,
 ) {
     val ankiReady: Boolean get() = ankiInstalled && ankiPermissionGranted
+
+    val readyFlashcardApp: FlashcardApp? get() = (flashcardApp as? FlashcardAppState.Ready)?.app
 }
 
 sealed interface SignInState {
@@ -182,6 +187,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         graph.freezeNotice.onBatteryExemption(previous.batteryUnrestricted, current.batteryUnrestricted)
         // The auto-off timer does not run while the phone sleeps; the switch must not show a stale "on".
         graph.detailedLogging.checkExpiry()
+    }
+
+    /**
+     * The user picked [app] in the "Flashcard app" picker (D65): pins its certificate and drops the
+     * provider client held for the previous app. The caller then requests [app]'s permission.
+     */
+    fun chooseFlashcardApp(app: FlashcardApp) {
+        if (graph.flashcardApps.choose(app)) {
+            graph.ankiRepository.releaseProviderClient("flashcard app changed")
+        }
+        refreshEnvironment()
     }
 
     fun dismissFreezeNotice() {
@@ -450,6 +466,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val app = getApplication<Application>()
         val power = app.getSystemService(PowerManager::class.java)
         return EnvironmentStatus(
+            flashcardApp = graph.flashcardApps.resolve(),
             ankiInstalled = graph.ankiAvailability.isInstalled(),
             ankiPermissionGranted = graph.ankiAvailability.hasPermission(),
             batteryUnrestricted = power.isIgnoringBatteryOptimizations(app.packageName),
@@ -466,7 +483,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     companion object {
-        const val ANKI_PERMISSION = AnkiDroidAvailability.PERMISSION
         private const val STOP_TIMEOUT_MS = 5_000L
     }
 }

@@ -1,6 +1,8 @@
 package ai.ankimcp.ankidroid.ui
 
 import ai.ankimcp.ankidroid.R
+import ai.ankimcp.ankidroid.anki.FlashcardApp
+import ai.ankimcp.ankidroid.anki.FlashcardAppState
 import ai.ankimcp.ankidroid.auth.UserInfo
 import ai.ankimcp.ankidroid.push.PushRegistrationState
 import ai.ankimcp.ankidroid.service.FreezingOem
@@ -77,6 +79,8 @@ data class BatteryUi(
     /** Non-null on makers whose skins freeze background apps. */
     val oem: FreezingOem?,
     val freezeDetected: Boolean,
+    /** Named by the maker's app-info buttons (D65). */
+    val flashcardApp: FlashcardApp?,
 )
 
 /** What the Notifications card's "off" text talks about. */
@@ -122,6 +126,9 @@ fun StatusScreen(
     onDisconnect: () -> Unit,
     onIdleWindowChange: (IdleWindow) -> Unit,
     onDismissFreezeNotice: () -> Unit,
+    flashcardApp: FlashcardAppState,
+    onChooseFlashcardApp: (FlashcardApp) -> Unit,
+    onEnvironmentChanged: () -> Unit,
     onLogout: () -> Unit,
     onSignIn: () -> Unit,
     onCancelSignIn: () -> Unit,
@@ -213,7 +220,18 @@ fun StatusScreen(
 
         // Shared below either tab.
         if (battery.freezeDetected) item { FreezeNoticeCard(onDismiss = onDismissFreezeNotice) }
-        item { BatteryCard(battery.unrestricted, battery.oem, battery.freezeDetected) }
+        // Only with a choice to make: with AnkiDroid alone the screen is as before (D65).
+        if (flashcardApp.candidates.size > 1) {
+            item {
+                FlashcardAppCard(
+                    title = "Flashcard app",
+                    state = flashcardApp,
+                    onChoose = onChooseFlashcardApp,
+                    onEnvironmentChanged = onEnvironmentChanged,
+                )
+            }
+        }
+        item { BatteryCard(battery.unrestricted, battery.oem, battery.freezeDetected, battery.flashcardApp) }
         item { NotificationsCard(granted = notificationsShown, use = notificationsUse(user != null, local.enabled)) }
 
         item { Spacer(Modifier.padding(bottom = 4.dp)) }

@@ -1,9 +1,12 @@
 package ai.ankimcp.ankidroid
 
 import ai.ankimcp.ankidroid.anki.AndroidAnkiDroidAvailability
+import ai.ankimcp.ankidroid.anki.AndroidInstalledApps
 import ai.ankimcp.ankidroid.anki.AnkiDroidAvailability
 import ai.ankimcp.ankidroid.anki.AnkiDroidRepository
 import ai.ankimcp.ankidroid.anki.ContentResolverAnkiProvider
+import ai.ankimcp.ankidroid.anki.FlashcardAppChoice
+import ai.ankimcp.ankidroid.anki.FlashcardAppResolver
 import ai.ankimcp.ankidroid.auth.CredentialStore
 import ai.ankimcp.ankidroid.auth.DeviceFlowClient
 import ai.ankimcp.ankidroid.auth.KeystoreCredentialCipher
@@ -210,10 +213,23 @@ class AppGraph(context: Context) {
         }
     }
 
-    val ankiAvailability: AnkiDroidAvailability = AndroidAnkiDroidAvailability(appContext)
+    /** Which flashcard app is used: AnkiDroid, or the one the user picked (D65). */
+    val flashcardApps = FlashcardAppResolver(
+        AndroidInstalledApps(appContext),
+        FlashcardAppChoice(
+            SharedPreferencesKeyValueStore(appContext.getSharedPreferences(FlashcardAppChoice.PREFS_NAME, Context.MODE_PRIVATE)),
+        ),
+    )
+
+    val ankiAvailability: AnkiDroidAvailability = AndroidAnkiDroidAvailability(appContext, flashcardApps)
 
     val ankiRepository = AnkiDroidRepository(
-        provider = ContentResolverAnkiProvider(appContext.contentResolver, log, AndroidElapsedClock),
+        provider = ContentResolverAnkiProvider(
+            appContext.contentResolver,
+            authority = { flashcardApps.current?.authority },
+            log = log,
+            clock = AndroidElapsedClock,
+        ),
         availability = ankiAvailability,
         providerExecutor = AnkiDroidRepository.newProviderExecutor(),
         log = log,
@@ -224,7 +240,9 @@ class AppGraph(context: Context) {
     val mcpServer = McpServer(
         // notificationPermission is set up further down; the lambda reads it only when sync is called.
         registry = ToolRegistry(
-            ankiTools(ankiRepository) { NotificationSyncRequester(appContext, notificationPermission).requestSync() },
+            ankiTools(ankiRepository) {
+                NotificationSyncRequester(appContext, notificationPermission, flashcardApps).requestSync()
+            },
         ),
         serverVersion = config.appVersion,
         log = log,

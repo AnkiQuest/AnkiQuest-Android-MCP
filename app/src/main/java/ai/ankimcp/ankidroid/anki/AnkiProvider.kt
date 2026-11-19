@@ -207,31 +207,43 @@ internal fun readRows(cursor: Cursor): List<ProviderRow> =
         rows
     }
 
+/** [authority] is the ready flashcard app's (D65), null while none is; calls then fail as a permission error. */
 class ContentResolverAnkiProvider(
     resolver: ContentResolver,
+    authority: () -> String?,
     log: TunnelLog,
     clock: ElapsedClock,
-) : AnkiProvider by EndpointAnkiProvider<ContentProviderClient>(
-    acquire = { resolver.acquireUnstableContentProviderClient(FlashCardsContract.AUTHORITY) },
+) : AnkiProvider by EndpointAnkiProvider<AuthorityClient>(
+    acquire = {
+        authority()?.let { name -> resolver.acquireUnstableContentProviderClient(name)?.let { AuthorityClient(name, it) } }
+    },
     endpointOf = ::ClientEndpoint,
-    resolver = ResolverEndpoint(resolver),
+    resolver = ResolverEndpoint(resolver, authority),
     log = log,
     clock = clock,
 )
 
-private class ClientEndpoint(private val client: ContentProviderClient) : ProviderEndpoint {
-    override fun query(path: String, projection: Array<String>?, selection: String?, args: Array<String>?, sortOrder: String?) =
-        remote { client.query(uriOf(path), projection, selection, args, sortOrder) }
+/** A provider client with the authority it was acquired for, so its calls never go to another app's authority. */
+private class AuthorityClient(val authority: String, val client: ContentProviderClient) : AutoCloseable {
+    override fun close() = client.close()
+}
 
-    override fun insert(path: String, values: Map<String, Any?>) = remote { client.insert(uriOf(path), contentValues(values)) }?.toString()
+private class ClientEndpoint(held: AuthorityClient) : ProviderEndpoint {
+    private val client = held.client
+    private val authority = held.authority
+
+    override fun query(path: String, projection: Array<String>?, selection: String?, args: Array<String>?, sortOrder: String?) =
+        remote { client.query(uriOf(authority, path), projection, selection, args, sortOrder) }
+
+    override fun insert(path: String, values: Map<String, Any?>) = remote { client.insert(uriOf(authority, path), contentValues(values)) }?.toString()
 
     override fun update(path: String, values: Map<String, Any?>, selection: String?, args: Array<String>?) =
-        remote { client.update(uriOf(path), contentValues(values), selection, args) }
+        remote { client.update(uriOf(authority, path), contentValues(values), selection, args) }
 
-    override fun delete(path: String, selection: String?, args: Array<String>?) = remote { client.delete(uriOf(path), selection, args) }
+    override fun delete(path: String, selection: String?, args: Array<String>?) = remote { client.delete(uriOf(authority, path), selection, args) }
 
     override fun bulkInsert(path: String, rows: List<Map<String, Any?>>) =
-        remote { client.bulkInsert(uriOf(path), rows.map(::contentValues).toTypedArray()) }
+        remote { client.bulkInsert(uriOf(authority, path), rows.map(::contentValues).toTypedArray()) }
 
     private inline fun <T> remote(call: () -> T): T = try {
         call()
@@ -240,22 +252,24 @@ private class ClientEndpoint(private val client: ContentProviderClient) : Provid
     }
 }
 
-private class ResolverEndpoint(private val resolver: ContentResolver) : ProviderEndpoint {
-    override fun query(path: String, projection: Array<String>?, selection: String?, args: Array<String>?, sortOrder: String?) =
-        resolver.query(uriOf(path), projection, selection, args, sortOrder)
+private class ResolverEndpoint(private val resolver: ContentResolver, private val authority: () -> String?) : ProviderEndpoint {
+    private fun readyAuthority(): String = authority() ?: throw SecurityException("No flashcard app is ready")
 
-    override fun insert(path: String, values: Map<String, Any?>) = resolver.insert(uriOf(path), contentValues(values))?.toString()
+    override fun query(path: String, projection: Array<String>?, selection: String?, args: Array<String>?, sortOrder: String?) =
+        resolver.query(uriOf(readyAuthority(), path), projection, selection, args, sortOrder)
+
+    override fun insert(path: String, values: Map<String, Any?>) = resolver.insert(uriOf(readyAuthority(), path), contentValues(values))?.toString()
 
     override fun update(path: String, values: Map<String, Any?>, selection: String?, args: Array<String>?) =
-        resolver.update(uriOf(path), contentValues(values), selection, args)
+        resolver.update(uriOf(readyAuthority(), path), contentValues(values), selection, args)
 
-    override fun delete(path: String, selection: String?, args: Array<String>?) = resolver.delete(uriOf(path), selection, args)
+    override fun delete(path: String, selection: String?, args: Array<String>?) = resolver.delete(uriOf(readyAuthority(), path), selection, args)
 
     override fun bulkInsert(path: String, rows: List<Map<String, Any?>>) =
-        resolver.bulkInsert(uriOf(path), rows.map(::contentValues).toTypedArray())
+        resolver.bulkInsert(uriOf(readyAuthority(), path), rows.map(::contentValues).toTypedArray())
 }
 
-private fun uriOf(path: String): Uri = "content://${FlashCardsContract.AUTHORITY}/$path".toUri()
+private fun uriOf(authority: String, path: String): Uri = "content://$authority/$path".toUri()
 
 private fun contentValues(values: Map<String, Any?>): ContentValues = ContentValues(values.size).apply {
     values.forEach { (key, value) ->

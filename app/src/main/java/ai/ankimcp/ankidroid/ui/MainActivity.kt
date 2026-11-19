@@ -222,6 +222,7 @@ private fun AppRoot(viewModel: MainViewModel) {
             !environment.ankiReady -> OnboardingScreen(
                 environment = environment,
                 onEnvironmentChanged = viewModel::refreshEnvironment,
+                onChooseFlashcardApp = viewModel::chooseFlashcardApp,
                 modifier = contentModifier,
             )
             !credentialsLoaded -> Box(contentModifier, contentAlignment = Alignment.Center) {
@@ -258,6 +259,7 @@ private fun AppRoot(viewModel: MainViewModel) {
                     unrestricted = environment.batteryUnrestricted,
                     oem = viewModel.freezingOem,
                     freezeDetected = freezeDetected,
+                    flashcardApp = environment.readyFlashcardApp,
                 ),
                 local = localUi,
                 notificationsShown = environment.notificationsShown,
@@ -269,6 +271,9 @@ private fun AppRoot(viewModel: MainViewModel) {
                 onDisconnect = viewModel::disconnect,
                 onIdleWindowChange = viewModel::setIdleWindow,
                 onDismissFreezeNotice = viewModel::dismissFreezeNotice,
+                flashcardApp = environment.flashcardApp,
+                onChooseFlashcardApp = viewModel::chooseFlashcardApp,
+                onEnvironmentChanged = viewModel::refreshEnvironment,
                 onLogout = viewModel::logout,
                 onSignIn = viewModel::startSignIn,
                 onCancelSignIn = viewModel::cancelSignIn,
