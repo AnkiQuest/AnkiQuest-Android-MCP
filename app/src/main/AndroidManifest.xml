@@ -10,13 +10,13 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <!-- The known flashcard apps (FlashcardApp, D65): AnkiDroid and AnkiQuest. -->
     <uses-permission android:name="com.ichi2.anki.permission.READ_WRITE_DATABASE" />
-    <uses-permission android:name="dev.hilll.anki.permission.READ_WRITE_DATABASE" />
+    <uses-permission android:name="org.ankiquest.anki.permission.READ_WRITE_DATABASE" />
     <!-- Google Play subscriptions (D62). The billing library declares it too; explicit for review. -->
     <uses-permission android:name="com.android.vending.BILLING" />
 
     <queries>
         <package android:name="com.ichi2.anki" />
-        <package android:name="dev.hilll.anki" />
+        <package android:name="org.ankiquest.anki" />
     </queries>
 
     <application

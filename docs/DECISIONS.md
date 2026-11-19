@@ -2234,9 +2234,9 @@ computer on the same Wi-Fi; claude.ai cannot reach a LAN address. Code in `local
 ## Flashcard app
 
 - **D65. AnkiQuest is a second known flashcard app, used only when the user picks it.**
-  AnkiQuest (`dev.hilll.anki`) is a fork of AnkiDroid with the same provider code under its own
-  package, authority (`dev.hilll.anki.flashcards`) and permission
-  (`dev.hilll.anki.permission.READ_WRITE_DATABASE`). An AnkiDroid maintainer objected to
+  AnkiQuest (`org.ankiquest.anki`) is a fork of AnkiDroid with the same provider code under its own
+  package, authority (`org.ankiquest.anki.flashcards`) and permission
+  (`org.ankiquest.anki.permission.READ_WRITE_DATABASE`). An AnkiDroid maintainer objected to
   discovering any app that declares the provider: apps trust AnkiDroid, so support has to add
   protection, not less. The design:
   - Closed list: `anki/FlashcardApp` names AnkiDroid and AnkiQuest. No other app is ever used,
