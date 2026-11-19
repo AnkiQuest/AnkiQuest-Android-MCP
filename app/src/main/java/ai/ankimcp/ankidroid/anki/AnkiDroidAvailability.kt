@@ -50,6 +50,9 @@ interface AnkiDroidAvailability {
 
     /** Null if no flashcard app is ready. */
     fun version(): AnkiDroidVersion?
+
+    /** A known flashcard app is installed, but none may be used until the user picks one (D65). */
+    fun needsChoice(): Boolean = false
 }
 
 /** Resolves the app on each check, so a changed certificate or authority is caught before each use. */
@@ -64,6 +67,8 @@ class AndroidAnkiDroidAvailability(
         }
         return apps.ankiDroidTrust().takeUnless { it == ProviderTrust.Trusted } ?: ProviderTrust.NotInstalled
     }
+
+    override fun needsChoice(): Boolean = apps.resolve() is FlashcardAppState.NeedsChoice
 
     override fun hasPermission(): Boolean {
         val app = ready() ?: return false

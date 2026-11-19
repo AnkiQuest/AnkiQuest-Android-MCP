@@ -159,6 +159,12 @@ sealed interface AnkiResult<out T> {
             "and open it once, then try again."
     }
 
+    /** A known flashcard app is installed, but the user has not picked it yet (D65). */
+    data object NoAppChosen : Failure {
+        override val message = "The AnkiMCP app on this phone has no flashcard app chosen. Open it and " +
+            "choose the flashcard app to use, then try again."
+    }
+
     /** `com.ichi2.anki` is installed, but its provider is not genuine AnkiDroid's (D66). */
     data object Untrusted : Failure {
         override val message = "The app installed as AnkiDroid on this phone is not an AnkiDroid release " +
@@ -712,7 +718,7 @@ class AnkiDroidRepository(
     private fun precheck(minVersion: RequiredVersion?): AnkiResult.Failure? {
         when (availability.trust()) {
             ProviderTrust.Trusted -> {}
-            ProviderTrust.NotInstalled -> return AnkiResult.NotInstalled
+            ProviderTrust.NotInstalled -> return if (availability.needsChoice()) AnkiResult.NoAppChosen else AnkiResult.NotInstalled
             ProviderTrust.OtherHolder, ProviderTrust.UnknownSigner -> return AnkiResult.Untrusted
         }
         if (!availability.hasPermission()) return AnkiResult.PermissionDenied

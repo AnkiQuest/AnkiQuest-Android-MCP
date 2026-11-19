@@ -2265,9 +2265,12 @@ computer on the same Wi-Fi; claude.ai cannot reach a LAN address. Code in `local
     used. This protects AnkiDroid users too. The held client and resolver calls use the
     authority of the app the last check found ready, and none while no app is.
   - An uninstalled choice falls back to AnkiDroid, or to the picker or the install step.
+  - While the picker waits for a choice, tools fail with `NoAppChosen` ("choose the flashcard
+    app to use"), not `NotInstalled`, and nothing is queried.
   - One abstraction: the package, authority and permission come from `FlashcardApp` everywhere
     (availability, provider URIs, the held provider client, the sync intent, onboarding and
-    battery texts, manifest `<uses-permission>` and `<queries>`). The held client keeps the
+    battery texts, manifest `<uses-permission>` and `<queries>` with each package and authority;
+    the authority entry lets a squatting app be seen and reported as such). The held client keeps the
     authority it was acquired for, and picking an app releases it.
   - Version gate: AnkiQuest's release version codes are `5nnnn000`, above every
     `RequiredVersion`, and its provider matches the AnkiDroid release it is based on.
@@ -2280,7 +2283,9 @@ computer on the same Wi-Fi; claude.ai cannot reach a LAN address. Code in `local
     unknown certificate on first use and after a change, the same with AnkiQuest installed, a
     debuggable build with a self-built AnkiDroid, rotation for AnkiDroid and AnkiQuest and for a
     chosen AnkiDroid, authority held by another package with AnkiDroid missing and with a
-    genuine AnkiDroid). `AnkiDroidCheckTest` covers the check itself (D66). The PackageManager
+    genuine AnkiDroid). `AnkiDroidCheckTest` covers the check itself (D66).
+    `FlashcardAppManifestTest` checks that the manifest declares every app's permission, package
+    and authority; `AnkiDroidRepositoryToolSetTest` covers `NoAppChosen`. The PackageManager
     adapter and the picker are not JVM-tested.
 
 ## AnkiDroid provider check

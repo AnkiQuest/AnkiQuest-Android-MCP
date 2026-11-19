@@ -17,6 +17,9 @@
     <queries>
         <package android:name="com.ichi2.anki" />
         <package android:name="org.ankiquest.anki" />
+        <!-- Shows an app squatting an authority, so it is reported as such rather than as missing. -->
+        <provider android:authorities="com.ichi2.anki.flashcards" />
+        <provider android:authorities="org.ankiquest.anki.flashcards" />
     </queries>
 
     <application

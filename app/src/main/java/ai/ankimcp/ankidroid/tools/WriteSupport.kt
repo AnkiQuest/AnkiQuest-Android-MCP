@@ -22,7 +22,7 @@ internal fun tooMany(count: Int, unit: String = "notes"): Nothing = fail(
 internal fun AnkiResult.Failure.notSent(): Boolean =
     this is AnkiResult.NotSent || this is AnkiResult.TooSlow || this is AnkiResult.NotResponding ||
         this is AnkiResult.Busy || this is AnkiResult.Frozen || this is AnkiResult.Outdated ||
-        this is AnkiResult.NotInstalled || this is AnkiResult.Untrusted ||
+        this is AnkiResult.NotInstalled || this is AnkiResult.NoAppChosen || this is AnkiResult.Untrusted ||
         this is AnkiResult.PermissionDenied
 
 /**
