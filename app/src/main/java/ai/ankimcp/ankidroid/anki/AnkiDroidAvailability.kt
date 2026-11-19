@@ -52,21 +52,17 @@ interface AnkiDroidAvailability {
     fun version(): AnkiDroidVersion?
 }
 
-/**
- * Resolves the app on each check, so a changed certificate or authority is caught before each use.
- * [check] says why AnkiDroid is not used when no app is ready (D66).
- */
+/** Resolves the app on each check, so a changed certificate or authority is caught before each use. */
 class AndroidAnkiDroidAvailability(
     private val context: Context,
     private val apps: FlashcardAppResolver,
 ) : AnkiDroidAvailability {
-    private val check = AnkiDroidCheck(AndroidInstalledApps(context), appBuild(context))
-
+    /** Trusted while an app is ready; otherwise why AnkiDroid is not used (D66). */
     override fun trust(): ProviderTrust {
         if (ready() != null) {
             return ProviderTrust.Trusted
         }
-        return check.trust().takeUnless { it == ProviderTrust.Trusted } ?: ProviderTrust.NotInstalled
+        return apps.ankiDroidTrust().takeUnless { it == ProviderTrust.Trusted } ?: ProviderTrust.NotInstalled
     }
 
     override fun hasPermission(): Boolean {
@@ -117,7 +113,7 @@ class AndroidInstalledApps(context: Context) : InstalledApps {
 }
 
 /** This app's own build: debuggable builds also accept a self-built AnkiDroid (D66). */
-private fun appBuild(context: Context): AppBuild {
+fun appBuild(context: Context): AppBuild {
     val debuggable = context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0
     return if (debuggable) AppBuild.Debuggable else AppBuild.Release
 }

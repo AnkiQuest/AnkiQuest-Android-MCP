@@ -30,7 +30,10 @@ enum class FlashcardApp(val packageName: String, val authority: String, val perm
 
 /** Which flashcard app is used, if any (D65). */
 sealed interface FlashcardAppState {
-    /** Installed apps that hold their own authority: what the picker lists. */
+    /**
+     * Installed apps that hold their own authority, AnkiDroid only when signed with its release
+     * key (D66): what the picker lists.
+     */
     val candidates: List<FlashcardApp>
 
     data class Ready(val app: FlashcardApp, override val candidates: List<FlashcardApp>) : FlashcardAppState
@@ -44,8 +47,9 @@ sealed interface FlashcardAppState {
 }
 
 /**
- * The user's choice and each app's pinned signing certificates, in [store]. A pin is the set of
- * certificate digests seen when the app was first used (AnkiDroid) or picked (the others).
+ * The user's choice and its pinned signing certificates, in [store]. A pin is the set of
+ * certificate digests seen when the app was picked. AnkiDroid has none: it is checked against its
+ * built-in release key instead (D66).
  */
 class FlashcardAppChoice(private val store: KeyValueStore) {
     fun chosen(): FlashcardApp? = store.getString(KEY_CHOSEN)?.let { name -> FlashcardApp.entries.find { it.name == name } }
@@ -53,21 +57,15 @@ class FlashcardAppChoice(private val store: KeyValueStore) {
     fun pin(app: FlashcardApp): Set<String>? =
         store.getString(pinKey(app))?.split(DIGEST_SEPARATOR)?.filter { it.isNotEmpty() }?.toSet()
 
-    fun save(app: FlashcardApp, digests: Set<String>, chosen: Choice) {
-        val changes = mutableMapOf<String, Any?>(pinKey(app) to digests.sorted().joinToString(DIGEST_SEPARATOR))
-        if (chosen == Choice.Chosen) {
-            changes[KEY_CHOSEN] = app.name
-        }
-        store.edit(changes)
+    /** Makes [app] the choice with [pin]; null stores no pin. */
+    fun save(app: FlashcardApp, pin: Set<String>?) {
+        store.edit(mapOf(KEY_CHOSEN to app.name, pinKey(app) to pin?.sorted()?.joinToString(DIGEST_SEPARATOR)))
     }
 
     /** Drops [app] as the choice together with its pin. */
     fun forget(app: FlashcardApp) {
         store.edit(mapOf(KEY_CHOSEN to null, pinKey(app) to null))
     }
-
-    /** Whether [save] also makes the app the user's choice, or only pins it (AnkiDroid's first use). */
-    enum class Choice { Chosen, PinOnly }
 
     private fun pinKey(app: FlashcardApp) = "$KEY_PIN_PREFIX${app.name}"
 
@@ -82,14 +80,21 @@ class FlashcardAppChoice(private val store: KeyValueStore) {
 /**
  * Decides which [FlashcardApp] to use (D65). Rules, checked on every [resolve]:
  * - A candidate is installed and is the package behind its own authority, so an app squatting
- *   the authority while the real package is missing is never used.
- * - The user's choice stands while it is a candidate and its certificates still contain the pin;
- *   otherwise the choice and its pin are dropped and the default applies.
- * - AnkiDroid (the default) is used without asking, as before; its certificates are pinned on
- *   first use. If they later differ from the pin, the user is asked again.
+ *   the authority while the real package is missing is never used. AnkiDroid must also be signed
+ *   with its release key, or [build] must be debuggable ([AnkiDroidCheck], D66).
+ * - The user's choice stands while it is a candidate and, for apps other than AnkiDroid, its
+ *   certificates still contain the pin; otherwise the choice and its pin are dropped and the
+ *   default applies.
+ * - AnkiDroid (the default) is used without asking, as before.
  * - Any other app is used only after [choose].
  */
-class FlashcardAppResolver(private val installed: InstalledApps, private val choice: FlashcardAppChoice) {
+class FlashcardAppResolver(
+    private val installed: InstalledApps,
+    private val choice: FlashcardAppChoice,
+    build: AppBuild,
+) {
+    private val ankiDroid = AnkiDroidCheck(installed, build)
+
     /** The app the last [resolve] returned as ready; read by the provider without new lookups. */
     @Volatile
     var current: FlashcardApp? = null
@@ -103,14 +108,23 @@ class FlashcardAppResolver(private val installed: InstalledApps, private val cho
         return state
     }
 
-    /** Makes [app] the user's choice and pins its certificates now. False if it is not a candidate. */
+    /** Why AnkiDroid is or is not used (D66); says why when no app is ready. */
+    fun ankiDroidTrust(): ProviderTrust = ankiDroid.trust()
+
+    /**
+     * Makes [app] the user's choice, pinning its certificates now unless it is AnkiDroid, which
+     * its release key identifies. False if it is not a candidate.
+     */
     @Synchronized
     fun choose(app: FlashcardApp): Boolean {
         if (app !in candidates()) {
             return false
         }
-        val digests = installed.signerDigests(app.packageName) ?: return false
-        choice.save(app, digests, FlashcardAppChoice.Choice.Chosen)
+        val pin = when (app) {
+            FlashcardApp.ANKIDROID -> null
+            FlashcardApp.ANKIQUEST -> installed.signerDigests(app.packageName) ?: return false
+        }
+        choice.save(app, pin)
         return true
     }
 
@@ -124,9 +138,9 @@ class FlashcardAppResolver(private val installed: InstalledApps, private val cho
             choice.forget(chosen)
         }
 
-        // Then the default, trusted on first use.
+        // Then the default, which being a candidate already proves genuine.
         val default = FlashcardApp.DEFAULT
-        if (default in candidates && trustDefault()) {
+        if (default in candidates) {
             return FlashcardAppState.Ready(default, candidates)
         }
 
@@ -136,27 +150,22 @@ class FlashcardAppResolver(private val installed: InstalledApps, private val cho
         return FlashcardAppState.NeedsChoice(candidates)
     }
 
-    private fun candidates(): List<FlashcardApp> = FlashcardApp.entries.filter { app ->
-        installed.signerDigests(app.packageName) != null && installed.authorityHolder(app.authority) == app.packageName
+    private fun candidates(): List<FlashcardApp> = FlashcardApp.entries.filter(::isCandidate)
+
+    private fun isCandidate(app: FlashcardApp): Boolean = when (app) {
+        // Authority holder and release key, checked together (D66).
+        FlashcardApp.ANKIDROID -> ankiDroid.trust() == ProviderTrust.Trusted
+        FlashcardApp.ANKIQUEST ->
+            installed.signerDigests(app.packageName) != null && installed.authorityHolder(app.authority) == app.packageName
     }
 
+    /** AnkiDroid has no pin: its release key was checked as a candidate. */
     private fun pinMatches(app: FlashcardApp): Boolean {
+        if (app == FlashcardApp.ANKIDROID) {
+            return true
+        }
         val pin = choice.pin(app) ?: return false
         val digests = installed.signerDigests(app.packageName) ?: return false
         return pin.isNotEmpty() && digests.containsAll(pin)
-    }
-
-    /** Pins the default's certificates the first time; afterwards they must contain the pin. */
-    private fun trustDefault(): Boolean {
-        val default = FlashcardApp.DEFAULT
-        if (choice.pin(default) != null) {
-            return pinMatches(default)
-        }
-        val digests = installed.signerDigests(default.packageName) ?: return false
-        if (digests.isEmpty()) {
-            return false
-        }
-        choice.save(default, digests, FlashcardAppChoice.Choice.PinOnly)
-        return true
     }
 }

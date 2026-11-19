@@ -7,6 +7,7 @@ import ai.ankimcp.ankidroid.anki.AnkiDroidRepository
 import ai.ankimcp.ankidroid.anki.ContentResolverAnkiProvider
 import ai.ankimcp.ankidroid.anki.FlashcardAppChoice
 import ai.ankimcp.ankidroid.anki.FlashcardAppResolver
+import ai.ankimcp.ankidroid.anki.appBuild
 import ai.ankimcp.ankidroid.auth.CredentialStore
 import ai.ankimcp.ankidroid.auth.DeviceFlowClient
 import ai.ankimcp.ankidroid.auth.KeystoreCredentialCipher
@@ -219,6 +220,7 @@ class AppGraph(context: Context) {
         FlashcardAppChoice(
             SharedPreferencesKeyValueStore(appContext.getSharedPreferences(FlashcardAppChoice.PREFS_NAME, Context.MODE_PRIVATE)),
         ),
+        appBuild(appContext),
     )
 
     val ankiAvailability: AnkiDroidAvailability = AndroidAnkiDroidAvailability(appContext, flashcardApps)

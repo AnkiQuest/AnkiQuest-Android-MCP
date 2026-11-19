@@ -2248,17 +2248,22 @@ computer on the same Wi-Fi; claude.ai cannot reach a LAN address. Code in `local
     are installed. It lists the installed known apps by their own label and icon. Picking one
     requests that app's runtime permission, so Android's dialog, which the app cannot fake,
     names it. The app never switches on its own.
-  - Certificate pinning (`FlashcardAppResolver`, `FlashcardAppChoice`): picking an app stores the
-    SHA-256 digests of its signing certificates; AnkiDroid's are stored on first use. Before
-    each use (every repository precheck, the sync intent, each screen refresh) the installed
-    package's digests must contain the pin. API 28+ reads `signingInfo`
-    (`apkContentsSigners` with several signers, else `signingCertificateHistory`, so a key
-    rotation keeps the pin); older versions read `signatures`. A changed certificate drops the
-    choice and its pin and falls back to AnkiDroid; a changed AnkiDroid certificate keeps the
-    old pin and asks until the user picks again, rather than re-pinning silently.
+  - Certificates (`FlashcardAppResolver`, `FlashcardAppChoice`): AnkiDroid is identified by its
+    built-in release key (`AnkiDroidCheck`, D66), never trusted on first use; a debuggable build
+    of this app also accepts a self-built AnkiDroid. AnkiDroid with another key is not a
+    candidate: it is not listed, cannot be picked, and the install step says it is not an
+    AnkiDroid release. Picking AnkiQuest stores the SHA-256 digests of its signing
+    certificates. Before each use (every repository precheck, the sync intent, each screen
+    refresh) both are checked again: AnkiDroid against the release key, AnkiQuest against the
+    pin. API 28+ reads `signingInfo` (`apkContentsSigners` with several signers, else
+    `signingCertificateHistory`, so a key rotation keeps the match); older versions read
+    `signatures`. A changed AnkiQuest certificate drops the choice and its pin: AnkiDroid is
+    used if it is a candidate, otherwise the picker asks again. A pin stored for AnkiDroid by
+    earlier builds of this branch is ignored.
   - Authority check: an app counts only when `resolveContentProvider(authority)` names its own
     package, so an app holding `com.ichi2.anki.flashcards` while AnkiDroid is missing is never
-    used. This protects AnkiDroid users too.
+    used. This protects AnkiDroid users too. The held client and resolver calls use the
+    authority of the app the last check found ready, and none while no app is.
   - An uninstalled choice falls back to AnkiDroid, or to the picker or the install step.
   - One abstraction: the package, authority and permission come from `FlashcardApp` everywhere
     (availability, provider URIs, the held provider client, the sync intent, onboarding and
@@ -2270,9 +2275,13 @@ computer on the same Wi-Fi; claude.ai cannot reach a LAN address. Code in `local
     "AnkiDroid" in the install step and in the tools' texts, including "Tap to sync AnkiDroid",
     which the sync tool's description quotes; the notification and the tool would otherwise
     disagree. With AnkiQuest in use these still say AnkiDroid.
-  - Tests (JVM): `FlashcardAppResolverTest` (none installed, AnkiDroid only, AnkiQuest only, both,
-    uninstalled choice, changed certificate, changed AnkiDroid certificate, rotation, authority
-    held by another package). The PackageManager adapter and the picker are not JVM-tested.
+  - Tests (JVM): `FlashcardAppResolverTest` (none installed, AnkiDroid only without a pin,
+    AnkiQuest only, both, uninstalled choice, changed AnkiQuest certificate, AnkiDroid with an
+    unknown certificate on first use and after a change, the same with AnkiQuest installed, a
+    debuggable build with a self-built AnkiDroid, rotation for AnkiDroid and AnkiQuest and for a
+    chosen AnkiDroid, authority held by another package with AnkiDroid missing and with a
+    genuine AnkiDroid). `AnkiDroidCheckTest` covers the check itself (D66). The PackageManager
+    adapter and the picker are not JVM-tested.
 
 ## AnkiDroid provider check
 

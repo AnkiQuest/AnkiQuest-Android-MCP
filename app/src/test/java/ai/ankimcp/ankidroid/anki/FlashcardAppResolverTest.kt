@@ -33,7 +33,7 @@ class FlashcardAppResolverTest {
     private val installed = FakeInstalledApps()
     private val store = InMemoryKeyValueStore()
 
-    private fun resolver() = FlashcardAppResolver(installed, FlashcardAppChoice(store))
+    private fun resolver(build: AppBuild = AppBuild.Release) = FlashcardAppResolver(installed, FlashcardAppChoice(store), build)
 
     @Test
     fun `none installed`() {
@@ -42,13 +42,14 @@ class FlashcardAppResolverTest {
     }
 
     @Test
-    fun `AnkiDroid only is used without asking and pinned on first use`() {
+    fun `AnkiDroid only is used without asking and without a pin`() {
         installed.install(ANKIDROID)
         val resolver = resolver()
 
         assertEquals(FlashcardAppState.Ready(ANKIDROID, listOf(ANKIDROID)), resolver.resolve())
         assertEquals(ANKIDROID, resolver.current)
-        assertEquals(setOf(ANKIDROID_CERT), FlashcardAppChoice(store).pin(ANKIDROID))
+        assertEquals(ProviderTrust.Trusted, resolver.ankiDroidTrust())
+        assertNull(FlashcardAppChoice(store).pin(ANKIDROID))
         assertNull(FlashcardAppChoice(store).chosen())
     }
 
@@ -125,23 +126,59 @@ class FlashcardAppResolverTest {
     }
 
     @Test
-    fun `a changed AnkiDroid certificate asks again instead of re-pinning`() {
+    fun `AnkiDroid with an unknown certificate is never used, even on first use`() {
+        installed.install(ANKIDROID, cert = OTHER_CERT)
+        val resolver = resolver()
+
+        assertEquals(FlashcardAppState.NoneInstalled, resolver.resolve())
+        assertEquals(ProviderTrust.UnknownSigner, resolver.ankiDroidTrust())
+        assertFalse(resolver.choose(ANKIDROID))
+        assertNull(resolver.current)
+    }
+
+    @Test
+    fun `a changed AnkiDroid certificate stops its use`() {
         installed.install(ANKIDROID)
         val resolver = resolver()
         resolver.resolve()
 
         installed.install(ANKIDROID, cert = OTHER_CERT)
 
-        assertEquals(FlashcardAppState.NeedsChoice(listOf(ANKIDROID)), resolver.resolve())
-        assertEquals(FlashcardAppState.NeedsChoice(listOf(ANKIDROID)), resolver.resolve())
-        assertEquals(setOf(ANKIDROID_CERT), FlashcardAppChoice(store).pin(ANKIDROID))
-
-        assertTrue(resolver.choose(ANKIDROID))
-        assertEquals(FlashcardAppState.Ready(ANKIDROID, listOf(ANKIDROID)), resolver.resolve())
+        assertEquals(FlashcardAppState.NoneInstalled, resolver.resolve())
+        assertNull(resolver.current)
     }
 
     @Test
-    fun `a rotated certificate keeps the pin while the old one is in the history`() {
+    fun `AnkiDroid with an unknown certificate leaves AnkiQuest to pick`() {
+        installed.install(ANKIDROID, cert = OTHER_CERT)
+        installed.install(ANKIQUEST)
+
+        assertEquals(FlashcardAppState.NeedsChoice(listOf(ANKIQUEST)), resolver().resolve())
+    }
+
+    @Test
+    fun `a debuggable build uses a self-built AnkiDroid`() {
+        installed.install(ANKIDROID, cert = OTHER_CERT)
+
+        assertEquals(FlashcardAppState.Ready(ANKIDROID, listOf(ANKIDROID)), resolver(AppBuild.Debuggable).resolve())
+    }
+
+    @Test
+    fun `a chosen AnkiDroid stays chosen across its own key rotation`() {
+        installed.install(ANKIDROID)
+        installed.install(ANKIQUEST)
+        val resolver = resolver()
+        assertTrue(resolver.choose(ANKIDROID))
+        assertNull(FlashcardAppChoice(store).pin(ANKIDROID))
+
+        installed.signers[ANKIDROID.packageName] = setOf(ANKIDROID_CERT, OTHER_CERT)
+
+        assertEquals(FlashcardAppState.Ready(ANKIDROID, listOf(ANKIDROID, ANKIQUEST)), resolver.resolve())
+        assertEquals(ANKIDROID, FlashcardAppChoice(store).chosen())
+    }
+
+    @Test
+    fun `a rotated certificate keeps AnkiDroid while the release key is in the history`() {
         installed.install(ANKIDROID)
         val resolver = resolver()
         resolver.resolve()
@@ -152,6 +189,17 @@ class FlashcardAppResolverTest {
     }
 
     @Test
+    fun `a rotated AnkiQuest certificate keeps the pin while the old one is in the history`() {
+        installed.install(ANKIQUEST)
+        val resolver = resolver()
+        resolver.choose(ANKIQUEST)
+
+        installed.signers[ANKIQUEST.packageName] = setOf(ANKIQUEST_CERT, OTHER_CERT)
+
+        assertEquals(FlashcardAppState.Ready(ANKIQUEST, listOf(ANKIQUEST)), resolver.resolve())
+    }
+
+    @Test
     fun `an authority held by another package is rejected`() {
         // AnkiDroid is missing and another app squats its authority.
         installed.authorities[ANKIDROID.authority] = SQUATTER
@@ -159,6 +207,16 @@ class FlashcardAppResolverTest {
 
         assertEquals(FlashcardAppState.NoneInstalled, resolver().resolve())
         assertFalse(resolver().choose(ANKIDROID))
+        assertEquals(ProviderTrust.NotInstalled, resolver().ankiDroidTrust())
+    }
+
+    @Test
+    fun `a genuine AnkiDroid whose authority another package holds is rejected`() {
+        installed.install(ANKIDROID)
+        installed.authorities[ANKIDROID.authority] = SQUATTER
+
+        assertEquals(FlashcardAppState.NoneInstalled, resolver(AppBuild.Debuggable).resolve())
+        assertEquals(ProviderTrust.OtherHolder, resolver().ankiDroidTrust())
     }
 
     @Test
@@ -185,7 +243,7 @@ class FlashcardAppResolverTest {
     }
 
     private companion object {
-        const val ANKIDROID_CERT = "a1"
+        const val ANKIDROID_CERT = AnkiDroidCheck.RELEASE_CERT_SHA256
         const val ANKIQUEST_CERT = "b2"
         const val OTHER_CERT = "c3"
         const val SQUATTER = "com.example.squatter"
