@@ -2269,8 +2269,8 @@ computer on the same Wi-Fi; claude.ai cannot reach a LAN address. Code in `local
     app to use"), not `NotInstalled`, and nothing is queried.
   - One abstraction: the package, authority and permission come from `FlashcardApp` everywhere
     (availability, provider URIs, the held provider client, the sync intent, onboarding and
-    battery texts, manifest `<uses-permission>` and `<queries>` with each package and authority;
-    the authority entry lets a squatting app be seen and reported as such). The held client keeps the
+    battery texts, manifest `<uses-permission>` and `<queries>` with each package and authority,
+    so the holder check sees whichever app holds an authority). The held client keeps the
     authority it was acquired for, and picking an app releases it.
   - Version gate: AnkiQuest's release version codes are `5nnnn000`, above every
     `RequiredVersion`, and its provider matches the AnkiDroid release it is based on.
