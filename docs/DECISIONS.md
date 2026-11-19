@@ -2292,8 +2292,9 @@ computer on the same Wi-Fi; claude.ai cannot reach a LAN address. Code in `local
   receive this app's reads and writes. The check (`anki/AnkiDroidCheck`, plain Kotlin):
   - `resolveContentProvider("com.ichi2.anki.flashcards")` must name `com.ichi2.anki`.
   - One of that package's signer digests must be the SHA-256 of AnkiDroid's release
-    certificate (CN=Nicolas Raoul, O=http://nrw.free.fr; Google Play and GitHub releases),
-    built into the app. API 28+ reads `signingInfo` (`apkContentsSigners` with several signers,
+    certificate (CN=Nicolas Raoul, O=http://nrw.free.fr; Google Play and GitHub releases) or of
+    the certificate F-Droid signs its own AnkiDroid builds with (`24A3D475…5906BB`), built into
+    the app. API 28+ reads `signingInfo` (`apkContentsSigners` with several signers,
     else `signingCertificateHistory`, so the release key still matches after a key rotation);
     older versions read `signatures`. Built in rather than trusted on first use, so an app
     installed under AnkiDroid's name before AnkiDroid is never trusted.
@@ -2303,15 +2304,14 @@ computer on the same Wi-Fi; claude.ai cannot reach a LAN address. Code in `local
   - Checked before each use: every repository precheck, each screen refresh, before acquiring
     the held provider client and before each resolver call. A package that fails counts as
     AnkiDroid not installed (`isInstalled()` false, `version()` null). The tools then answer
-    `AnkiResult.Untrusted` ("not an AnkiDroid release ... install AnkiDroid from Google Play or
-    its GitHub releases"), and onboarding step 1 says the same instead of "not installed".
+    `AnkiResult.Untrusted` ("not an AnkiDroid release ..."), and onboarding step 1 says the same instead of "not installed".
     A held client is not re-checked per call: it is a binder to the process that passed the
     check, and it dies with that process.
   - No new permissions or `<queries>`: `com.ichi2.anki` is already declared, and resolving an
     authority needs no visibility of other packages.
   - Not covered: the sync notification's intent (D58) still targets the `com.ichi2.anki`
     package without the check; it carries no data.
-  - Tests (JVM): `AnkiDroidCheckTest` (genuine; digest letter case; not installed; authority
+  - Tests (JVM): `AnkiDroidCheckTest` (genuine; digest letter case; F-Droid build; not installed; authority
     squatted while AnkiDroid is missing; another package holds the authority, also when
     debuggable; AnkiDroid without its provider; unknown certificate; no certificates; unknown
     certificate accepted when debuggable; rotated key with the release key in its history).

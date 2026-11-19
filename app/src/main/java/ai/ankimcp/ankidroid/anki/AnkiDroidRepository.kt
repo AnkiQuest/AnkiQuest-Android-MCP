@@ -163,7 +163,7 @@ sealed interface AnkiResult<out T> {
     data object Untrusted : Failure {
         override val message = "The app installed as AnkiDroid on this phone is not an AnkiDroid release " +
             "(it is not signed with AnkiDroid's key, or another app holds AnkiDroid's data provider), so " +
-            "AnkiMCP does not use it. Install AnkiDroid from Google Play or its GitHub releases, then try again."
+            "AnkiMCP does not use it. Install AnkiDroid from Google Play, F-Droid or its GitHub releases, then try again."
     }
 
     data object PermissionDenied : Failure {

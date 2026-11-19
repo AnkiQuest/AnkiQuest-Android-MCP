@@ -77,7 +77,7 @@ fun OnboardingScreen(
                     "AnkiDroid is not installed. Install it, open it once to finish its setup, then come back."
                 } else {
                     "The installed AnkiDroid is not an AnkiDroid release, so AnkiMCP does not use it. Install " +
-                        "AnkiDroid from Google Play or its GitHub releases, then come back."
+                        "AnkiDroid from Google Play, F-Droid or its GitHub releases, then come back."
                 },
             ) {
                 Button(onClick = { openPlayStore(context, FlashcardApp.ANKIDROID.packageName) }) { Text("Install AnkiDroid") }
