@@ -1,3 +1,5 @@
+@AGENTS.md
+
 # AnkiMCP
 
 Android app (Kotlin, Compose) that serves MCP over the AnkiMCP tunnel relay and reads AnkiDroid
