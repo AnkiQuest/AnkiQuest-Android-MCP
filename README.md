@@ -283,3 +283,5 @@ reports are attached to the run. Releases are tag-driven and signed in CI; see
 [AGPL-3.0](LICENSE). `FlashCardsContract.kt` is vendored from AnkiDroid under its own
 all-permissive notice, and the runtime libraries are Apache-2.0 except NanoHTTPD (BSD
 3-Clause); see [NOTICE](NOTICE).
+
+AnkiQuest's additions are AGPL-3.0-or-later; the end of [NOTICE](NOTICE) lists them.
