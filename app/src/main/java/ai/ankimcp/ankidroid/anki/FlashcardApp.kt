@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 package ai.ankimcp.ankidroid.anki
 
 import ai.ankimcp.ankidroid.settings.KeyValueStore
