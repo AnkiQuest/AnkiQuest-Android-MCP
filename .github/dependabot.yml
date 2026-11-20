@@ -44,3 +44,12 @@ updates:
     groups:
       github-actions:
         patterns: ['*']
+
+  # flake.lock: AnkiQuest-Dev, which pins the dev shell's toolchain.
+  - package-ecosystem: nix
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      nix:
+        patterns: ['*']
