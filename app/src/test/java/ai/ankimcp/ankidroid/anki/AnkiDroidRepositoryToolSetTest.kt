@@ -78,6 +78,15 @@ class AnkiDroidRepositoryToolSetTest {
     }
 
     @Test
+    fun `an installed flashcard app that is not picked yet says so, and nothing is queried`() = runTest {
+        val provider = RecordingProvider { emptyList() }
+        val availability = FakeAvailability(installed = false, version = null, needsChoice = true)
+
+        assertEquals(AnkiResult.NoAppChosen, repository(provider, availability).searchCardIds(""))
+        assertTrue(provider.queries.isEmpty())
+    }
+
+    @Test
     fun `install and permission are checked before the version`() = runTest {
         val provider = RecordingProvider { emptyList() }
         assertEquals(AnkiResult.NotInstalled, repository(provider, FakeAvailability(installed = false, version = null)).searchCardIds(""))

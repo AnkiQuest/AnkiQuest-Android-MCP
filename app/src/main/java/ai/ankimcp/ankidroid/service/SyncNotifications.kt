@@ -1,8 +1,9 @@
 package ai.ankimcp.ankidroid.service
 
 import ai.ankimcp.ankidroid.R
-import ai.ankimcp.ankidroid.anki.AnkiDroidAvailability
 import ai.ankimcp.ankidroid.anki.AnkiDroidSync
+import ai.ankimcp.ankidroid.anki.FlashcardAppResolver
+import ai.ankimcp.ankidroid.anki.FlashcardAppState
 import ai.ankimcp.ankidroid.anki.SyncRequest
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -18,13 +19,19 @@ import androidx.core.app.NotificationCompat
  * its `IntentHandler` activity (exported, category DEFAULT) turns into a normal sync, at most one
  * every 2 minutes (AnkiDroid's `INTENT_SYNC_MIN_INTERVAL`, v2.25.3) (D58).
  */
-class NotificationSyncRequester(context: Context, private val permission: NotificationPermissionGate) : AnkiDroidSync {
+class NotificationSyncRequester(
+    context: Context,
+    private val permission: NotificationPermissionGate,
+    private val apps: FlashcardAppResolver,
+) : AnkiDroidSync {
     private val appContext = context.applicationContext
     private val manager = appContext.getSystemService(NotificationManager::class.java)
 
     override fun requestSync(): SyncRequest {
+        // The flashcard app in use (D65); AnkiQuest handles the same intent.
+        val app = (apps.resolve() as? FlashcardAppState.Ready)?.app ?: return SyncRequest.AnkiDroidMissing
         val intent = Intent(DO_SYNC_ACTION)
-            .setPackage(AnkiDroidAvailability.PACKAGE_NAME)
+            .setPackage(app.packageName)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         if (resolves(intent).not()) return SyncRequest.AnkiDroidMissing
         permission.blockReason("\"Tap to sync AnkiDroid\" notification", CHANNEL_ID)?.let {

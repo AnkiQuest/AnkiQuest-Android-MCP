@@ -17,10 +17,12 @@ class FakeAvailability(
     var installed: Boolean = true,
     var permission: Boolean = true,
     var version: AnkiDroidVersion? = AnkiDroidVersion(22503300, "2.25.3"),
+    var needsChoice: Boolean = false,
 ) : AnkiDroidAvailability {
-    override fun isInstalled() = installed
+    override fun trust() = if (installed) ProviderTrust.Trusted else ProviderTrust.NotInstalled
     override fun hasPermission() = permission
     override fun version() = version
+    override fun needsChoice() = needsChoice
 }
 
 /** A provider query as the repository sent it. */

@@ -1,6 +1,8 @@
 package ai.ankimcp.ankidroid.ui
 
-import ai.ankimcp.ankidroid.anki.AnkiDroidAvailability
+import ai.ankimcp.ankidroid.anki.FlashcardApp
+import ai.ankimcp.ankidroid.anki.FlashcardAppState
+import ai.ankimcp.ankidroid.anki.ProviderTrust
 import ai.ankimcp.ankidroid.appGraph
 import ai.ankimcp.ankidroid.auth.AuthException
 import ai.ankimcp.ankidroid.auth.DeviceFlowClient
@@ -48,7 +50,10 @@ import kotlinx.coroutines.withContext
 import java.io.File
 
 data class EnvironmentStatus(
-    val ankiInstalled: Boolean,
+    /** The flashcard app in use, or why none is (D65). */
+    val flashcardApp: FlashcardAppState,
+    /** Whether the app in use is ready, or why AnkiDroid is not used (D66). */
+    val ankiTrust: ProviderTrust,
     val ankiPermissionGranted: Boolean,
     val batteryUnrestricted: Boolean,
     /** POST_NOTIFICATIONS (Android 13+); what the runtime permission request can change. */
@@ -56,7 +61,11 @@ data class EnvironmentStatus(
     /** The permission, the app's notification switch and every channel are on. */
     val notificationsShown: Boolean,
 ) {
+    val ankiInstalled: Boolean get() = ankiTrust == ProviderTrust.Trusted
+
     val ankiReady: Boolean get() = ankiInstalled && ankiPermissionGranted
+
+    val readyFlashcardApp: FlashcardApp? get() = (flashcardApp as? FlashcardAppState.Ready)?.app
 }
 
 sealed interface SignInState {
@@ -182,6 +191,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         graph.freezeNotice.onBatteryExemption(previous.batteryUnrestricted, current.batteryUnrestricted)
         // The auto-off timer does not run while the phone sleeps; the switch must not show a stale "on".
         graph.detailedLogging.checkExpiry()
+    }
+
+    /**
+     * The user picked [app] in the "Flashcard app" picker (D65): pins its certificate and drops the
+     * provider client held for the previous app. The caller then requests [app]'s permission.
+     */
+    fun chooseFlashcardApp(app: FlashcardApp) {
+        if (graph.flashcardApps.choose(app)) {
+            graph.ankiRepository.releaseProviderClient("flashcard app changed")
+        }
+        refreshEnvironment()
     }
 
     fun dismissFreezeNotice() {
@@ -450,7 +470,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val app = getApplication<Application>()
         val power = app.getSystemService(PowerManager::class.java)
         return EnvironmentStatus(
-            ankiInstalled = graph.ankiAvailability.isInstalled(),
+            flashcardApp = graph.flashcardApps.resolve(),
+            ankiTrust = graph.ankiAvailability.trust(),
             ankiPermissionGranted = graph.ankiAvailability.hasPermission(),
             batteryUnrestricted = power.isIgnoringBatteryOptimizations(app.packageName),
             notificationsGranted = hasNotificationPermission(app),
@@ -466,7 +487,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     companion object {
-        const val ANKI_PERMISSION = AnkiDroidAvailability.PERMISSION
         private const val STOP_TIMEOUT_MS = 5_000L
     }
 }

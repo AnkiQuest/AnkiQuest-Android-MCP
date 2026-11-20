@@ -1,7 +1,9 @@
 package ai.ankimcp.ankidroid.ui
 
 import ai.ankimcp.ankidroid.R
-import ai.ankimcp.ankidroid.anki.AnkiDroidAvailability
+import ai.ankimcp.ankidroid.anki.FlashcardApp
+import ai.ankimcp.ankidroid.anki.FlashcardAppState
+import ai.ankimcp.ankidroid.anki.ProviderTrust
 import ai.ankimcp.ankidroid.service.FreezingOem
 import android.content.ActivityNotFoundException
 import android.content.Context
@@ -36,9 +38,13 @@ import androidx.compose.ui.unit.dp
 fun OnboardingScreen(
     environment: EnvironmentStatus,
     onEnvironmentChanged: () -> Unit,
+    onChooseFlashcardApp: (FlashcardApp) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
+    // AnkiDroid unless the user picked another app (D65); the texts below name the app in use.
+    val app = environment.readyFlashcardApp
+    val appName = (app ?: FlashcardApp.DEFAULT).displayName
     var permissionDenied by remember { mutableStateOf(false) }
     val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         permissionDenied = !granted
@@ -54,24 +60,39 @@ fun OnboardingScreen(
         Text("Set up AnkiMCP", style = MaterialTheme.typography.headlineSmall)
         Text(stringResource(R.string.onboarding_intro))
 
-        StepCard(
-            title = "1. AnkiDroid",
-            done = environment.ankiInstalled,
-            doneText = "AnkiDroid is installed.",
-            todoText = "AnkiDroid is not installed. Install it, open it once to finish its setup, then come back.",
-        ) {
-            Button(onClick = { openPlayStore(context, "com.ichi2.anki") }) { Text("Install AnkiDroid") }
+        // A choice to make (AnkiDroid missing, or another known app installed too): the picker.
+        if (environment.flashcardApp is FlashcardAppState.NeedsChoice || environment.flashcardApp.candidates.size > 1) {
+            FlashcardAppCard(
+                title = "1. Flashcard app",
+                state = environment.flashcardApp,
+                onChoose = onChooseFlashcardApp,
+                onEnvironmentChanged = onEnvironmentChanged,
+            )
+        } else {
+            StepCard(
+                title = "1. $appName",
+                done = environment.ankiInstalled,
+                doneText = "$appName is installed.",
+                todoText = if (environment.ankiTrust == ProviderTrust.NotInstalled) {
+                    "AnkiDroid is not installed. Install it, open it once to finish its setup, then come back."
+                } else {
+                    "The installed AnkiDroid is not an AnkiDroid release, so AnkiMCP does not use it. Install " +
+                        "AnkiDroid from Google Play, F-Droid or its GitHub releases, then come back."
+                },
+            ) {
+                Button(onClick = { openPlayStore(context, FlashcardApp.ANKIDROID.packageName) }) { Text("Install AnkiDroid") }
+            }
         }
 
         StepCard(
-            title = "2. Access to AnkiDroid",
+            title = "2. Access to $appName",
             done = environment.ankiPermissionGranted,
             doneText = "Permission granted.",
-            todoText = "Allow this app to read your AnkiDroid collection.",
+            todoText = "Allow this app to read your $appName collection.",
         ) {
             Button(
-                enabled = environment.ankiInstalled,
-                onClick = { permissionLauncher.launch(MainViewModel.ANKI_PERMISSION) },
+                enabled = app != null,
+                onClick = { app?.let { permissionLauncher.launch(it.permission) } },
             ) { Text("Grant access") }
             if (permissionDenied) {
                 Text(
@@ -83,7 +104,7 @@ fun OnboardingScreen(
             }
         }
 
-        BatteryCard(environment.batteryUnrestricted, oem = FreezingOem.current(), freezeDetected = false)
+        BatteryCard(environment.batteryUnrestricted, oem = FreezingOem.current(), freezeDetected = false, flashcardApp = app)
     }
 }
 
@@ -119,9 +140,12 @@ fun BatteryCard(
     unrestricted: Boolean,
     oem: FreezingOem?,
     freezeDetected: Boolean,
+    /** The flashcard app in use (D65); AnkiDroid when none is ready yet. */
+    flashcardApp: FlashcardApp?,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
+    val app = flashcardApp ?: FlashcardApp.DEFAULT
     Card(modifier = modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             // Not optional on a freezing maker without the exemption, or once a freeze happened.
@@ -134,7 +158,7 @@ fun BatteryCard(
                 Text(
                     if (oem != null) {
                         "This phone pauses background apps soon after the screen turns off, even while " +
-                            "Claude is using them. Both AnkiMCP and AnkiDroid must be allowed to run " +
+                            "Claude is using them. Both AnkiMCP and ${app.displayName} must be allowed to run " +
                             "in the background, or Claude's requests time out."
                     } else {
                         "Android may pause the app when the phone is idle, which cuts the connection or the " +
@@ -148,8 +172,8 @@ fun BatteryCard(
                 // The maker's switches live on each app's own page; there is no public intent for its battery sub-page.
                 BatteryAction.MakerAppInfo -> Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(onClick = { openAppSettings(context) }) { Text("AnkiMCP info") }
-                    OutlinedButton(onClick = { openAppSettings(context, AnkiDroidAvailability.PACKAGE_NAME) }) {
-                        Text("AnkiDroid info")
+                    OutlinedButton(onClick = { openAppSettings(context, app.packageName) }) {
+                        Text("${app.displayName} info")
                     }
                 }
                 BatteryAction.BatterySettings ->

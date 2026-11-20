@@ -64,7 +64,10 @@ app/src/main/java/ai/ankimcp/ankidroid/
                retry), AnkiDroidRepository (typed reads with null retry and the empty-note-search
                probe, `write` that runs once and reports a timeout as outcome unknown, version
                gate, CallBudget shared by one tool's calls, cards read <=100 per call),
-               AnkiDroidAvailability (installed, permission, AnkiDroidVersion), AnkiDroidSync
+               AnkiDroidAvailability (installed, permission, AnkiDroidVersion; AndroidInstalledApps),
+               FlashcardApp (closed list AnkiDroid/AnkiQuest, FlashcardAppResolver: AnkiDroid by its
+               release key, AnkiQuest pinned on choice, D65), AnkiDroidTrust (AnkiDroidCheck:
+               authority holder + built-in release key, D66), AnkiDroidSync
                (seam for the sync notification; Android side service/NotificationSyncRequester)
   tools/       The add-on's tools AnkiDroid can serve (D57): reads in ListDecksTool, ModelTools,
                NoteReadTools, CardReadTools (incl. get_due_cards), DeckReadTools; writes in
@@ -83,7 +86,7 @@ app/src/main/java/ai/ankimcp/ankidroid/
                SignInNotifications ("Sign in again" notification), NotificationPermission
                (permission, app switch and channel check per notification, logs dropped ones)
   ui/          MainActivity (Status/Log/About bottom navigation), MainViewModel, SignInCard, Onboarding/
-               Status/Log/About screens, LocalServerCard, PlanCard (+ planCardUi derivation),
+               Status/Log/About screens, LocalServerCard, FlashcardAppCard (picker, D65), PlanCard (+ planCardUi derivation),
                Clipboard, Theme (brand colours +
                StatusColors), SignedOutRedirectActivity (sign-out redirect trampoline, D64)
   log/         TunnelLog (100-entry ring buffer shown in the UI, single entry point, feeds
