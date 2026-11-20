@@ -1,8 +1,9 @@
 name: CI
 
+# master: AnkiQuest-Android-MCP's default branch
 on:
   push:
-    branches: [main]
+    branches: [main, master]
   pull_request:
 
 concurrency:
