@@ -68,7 +68,7 @@ app/src/main/java/ai/ankimcp/ankidroid/
                gate, CallBudget shared by one tool's calls, cards read <=100 per call),
                AnkiDroidAvailability (installed, permission, AnkiDroidVersion; AndroidInstalledApps),
                FlashcardApp (closed list AnkiDroid/AnkiQuest, FlashcardAppResolver: AnkiDroid by its
-               release key, AnkiQuest pinned on choice, D65), AnkiDroidTrust (AnkiDroidCheck:
+               release key, AnkiQuest (both packages, D67) pinned on choice, D65), AnkiDroidTrust (AnkiDroidCheck:
                authority holder + built-in release key, D66), AnkiDroidSync
                (seam for the sync notification; Android side service/NotificationSyncRequester)
   tools/       The add-on's tools AnkiDroid can serve (D57): reads in ListDecksTool, ModelTools,
