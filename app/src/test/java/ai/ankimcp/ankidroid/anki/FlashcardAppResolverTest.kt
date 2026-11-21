@@ -4,6 +4,7 @@ package ai.ankimcp.ankidroid.anki
 
 import ai.ankimcp.ankidroid.anki.FlashcardApp.ANKIDROID
 import ai.ankimcp.ankidroid.anki.FlashcardApp.ANKIQUEST
+import ai.ankimcp.ankidroid.anki.FlashcardApp.ANKIQUEST_RELEASED
 import ai.ankimcp.ankidroid.settings.InMemoryKeyValueStore
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -53,6 +54,43 @@ class FlashcardAppResolverTest {
         assertEquals(ProviderTrust.Trusted, resolver.ankiDroidTrust())
         assertNull(FlashcardAppChoice(store).pin(ANKIDROID))
         assertNull(FlashcardAppChoice(store).chosen())
+    }
+
+    @Test
+    fun `released AnkiQuest only needs an explicit choice`() {
+        installed.install(ANKIQUEST_RELEASED)
+        val resolver = resolver()
+
+        assertEquals(FlashcardAppState.NeedsChoice(listOf(ANKIQUEST_RELEASED)), resolver.resolve())
+
+        assertTrue(resolver.choose(ANKIQUEST_RELEASED))
+        assertEquals(FlashcardAppState.Ready(ANKIQUEST_RELEASED, listOf(ANKIQUEST_RELEASED)), resolver.resolve())
+        assertEquals(setOf(ANKIQUEST_RELEASED_CERT), FlashcardAppChoice(store).pin(ANKIQUEST_RELEASED))
+    }
+
+    @Test
+    fun `released AnkiQuest with a changed certificate asks again`() {
+        installed.install(ANKIQUEST_RELEASED)
+        val resolver = resolver()
+        resolver.choose(ANKIQUEST_RELEASED)
+
+        installed.install(ANKIQUEST_RELEASED, cert = OTHER_CERT)
+
+        assertEquals(FlashcardAppState.NeedsChoice(listOf(ANKIQUEST_RELEASED)), resolver.resolve())
+        assertNull(FlashcardAppChoice(store).chosen())
+    }
+
+    @Test
+    fun `both AnkiQuest packages are offered and the choice decides`() {
+        installed.install(ANKIQUEST)
+        installed.install(ANKIQUEST_RELEASED)
+        val resolver = resolver()
+        val both = listOf(ANKIQUEST, ANKIQUEST_RELEASED)
+
+        assertEquals(FlashcardAppState.NeedsChoice(both), resolver.resolve())
+
+        assertTrue(resolver.choose(ANKIQUEST_RELEASED))
+        assertEquals(FlashcardAppState.Ready(ANKIQUEST_RELEASED, both), resolver.resolve())
     }
 
     @Test
@@ -247,8 +285,13 @@ class FlashcardAppResolverTest {
     private companion object {
         const val ANKIDROID_CERT = AnkiDroidCheck.RELEASE_CERT_SHA256
         const val ANKIQUEST_CERT = "b2"
+        const val ANKIQUEST_RELEASED_CERT = "b3"
         const val OTHER_CERT = "c3"
         const val SQUATTER = "com.example.squatter"
-        val CERT_OF = mapOf(ANKIDROID to ANKIDROID_CERT, ANKIQUEST to ANKIQUEST_CERT)
+        val CERT_OF = mapOf(
+            ANKIDROID to ANKIDROID_CERT,
+            ANKIQUEST to ANKIQUEST_CERT,
+            ANKIQUEST_RELEASED to ANKIQUEST_RELEASED_CERT,
+        )
     }
 }
