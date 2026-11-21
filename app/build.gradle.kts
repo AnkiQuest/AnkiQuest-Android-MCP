@@ -129,6 +129,17 @@ android {
     packaging {
         resources.excludes += "/META-INF/{AL2.0,LGPL2.1}"
     }
+
+    // AnkiQuest: -PabiSplits=true builds one APK per ABI and a universal one,
+    // as AnkiQuest-Dev's android-release workflow publishes them.
+    splits {
+        abi {
+            isEnable = providers.gradleProperty("abiSplits").orNull == "true"
+            reset()
+            include("arm64-v8a", "armeabi-v7a", "x86_64", "x86")
+            isUniversalApk = true
+        }
+    }
 }
 
 kotlin {
