@@ -2,6 +2,7 @@
 
 package ai.ankimcp.ankidroid.anki
 
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
@@ -18,5 +19,15 @@ class FlashcardAppManifestTest {
             assertTrue(app.packageName, manifest.contains("<package android:name=\"${app.packageName}\""))
             assertTrue(app.authority, manifest.contains("<provider android:authorities=\"${app.authority}\""))
         }
+    }
+
+    /** Every AnkiQuest build installs as org.ankiquest (AnkiQuest-Android#461). */
+    @Test
+    fun `AnkiQuest is org dot ankiquest`() {
+        val app = FlashcardApp.ANKIQUEST
+
+        assertEquals("org.ankiquest", app.packageName)
+        assertEquals("org.ankiquest.flashcards", app.authority)
+        assertEquals("org.ankiquest.permission.READ_WRITE_DATABASE", app.permission)
     }
 }
