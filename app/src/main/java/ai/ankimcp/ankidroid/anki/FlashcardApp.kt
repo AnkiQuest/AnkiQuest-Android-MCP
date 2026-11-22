@@ -17,15 +17,15 @@ enum class FlashcardApp(val packageName: String, val authority: String, val perm
         "AnkiDroid",
     ),
     ANKIQUEST(
-        "org.ankiquest.anki",
-        "org.ankiquest.anki.flashcards",
-        "org.ankiquest.anki.permission.READ_WRITE_DATABASE",
+        "org.ankiquest",
+        "org.ankiquest.flashcards",
+        "org.ankiquest.permission.READ_WRITE_DATABASE",
         "AnkiQuest",
     ),
 
     /**
      * The package released AnkiQuest builds install as today, trusted like [ANKIQUEST] (D67).
-     * Remove once its users have moved to `org.ankiquest.anki` (AnkiQuest-Android#420).
+     * Remove once its users have moved to `org.ankiquest` (AnkiQuest-Android#420).
      */
     ANKIQUEST_RELEASED(
         "com.ichi2.anki.quest",
