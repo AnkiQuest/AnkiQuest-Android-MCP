@@ -205,7 +205,7 @@ private fun StepCard(
     }
 }
 
-private fun openPlayStore(context: Context, packageName: String) {
+internal fun openPlayStore(context: Context, packageName: String) {
     val market = Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=$packageName"))
     val web = Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=$packageName"))
     try {
