@@ -41,8 +41,10 @@
     <string name="about_link_forum_label">💬 Forum</string>
     <string name="about_link_status">Service status</string>
     <string name="about_link_status_label">📡 Service status</string>
-    <string name="about_link_source">Source code</string>
-    <string name="about_link_source_label">💻 Source code</string>
+    <string name="about_link_rate">Like us? Rate us on Google Play</string>
+    <string name="about_link_rate_label">👍 Like us? Rate us on Google Play</string>
+    <string name="about_link_source">Star us on GitHub</string>
+    <string name="about_link_source_label">⭐ Star us on GitHub</string>
     <string name="about_docs_url" translatable="false">https://ankimcp.ai/docs/ankidroid-mcp</string>
     <!-- Log tab, detailed log (D61). -->
     <string name="detailed_logging_title">Detailed logging</string>

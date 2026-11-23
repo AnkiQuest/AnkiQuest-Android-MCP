@@ -43,14 +43,30 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 
-/** [label] is the title with an emoji in front; TalkBack reads [title]. */
-private data class AboutLink(@param:StringRes val title: Int, @param:StringRes val label: Int, val url: String)
+/**
+ * [label] is the title with an emoji in front; TalkBack reads [title]. A link with [playPackage]
+ * opens that app's page in the Play Store app, [url] only when Play is missing.
+ */
+private data class AboutLink(
+    @param:StringRes val title: Int,
+    @param:StringRes val label: Int,
+    val url: String,
+    val playPackage: String? = null,
+)
+
+private const val PLAY_PACKAGE = "ai.ankimcp.ankidroid"
 
 private val Links = listOf(
     AboutLink(R.string.about_link_website, R.string.about_link_website_label, "https://ankimcp.ai"),
     AboutLink(R.string.about_link_dashboard, R.string.about_link_dashboard_label, "https://web.ankimcp.ai"),
     AboutLink(R.string.about_link_forum, R.string.about_link_forum_label, "https://forum.ankimcp.ai/"),
     AboutLink(R.string.about_link_status, R.string.about_link_status_label, "https://status.ankimcp.ai/"),
+    AboutLink(
+        R.string.about_link_rate,
+        R.string.about_link_rate_label,
+        "https://play.google.com/store/apps/details?id=$PLAY_PACKAGE",
+        playPackage = PLAY_PACKAGE,
+    ),
     AboutLink(R.string.about_link_source, R.string.about_link_source_label, "https://github.com/ankimcp/ankidroid-mcp"),
 )
 
@@ -113,7 +129,7 @@ fun AboutScreen(appVersion: String, modifier: Modifier = Modifier) {
                     supportingContent = { Text(link.url.removePrefix("https://").trimEnd('/')) },
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                     modifier = Modifier.clickable(role = Role.Button, onClickLabel = "Open $title") {
-                        openLink(context, link.url)
+                        if (link.playPackage != null) openPlayStore(context, link.playPackage) else openLink(context, link.url)
                     },
                 )
             }
