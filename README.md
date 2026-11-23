@@ -1,4 +1,7 @@
-# AnkiMCP
+# AnkiQuest-Android-MCP
+
+AnkiQuest's fork of [ankimcp/ankidroid-mcp](https://github.com/ankimcp/ankidroid-mcp);
+everything below is upstream's README.
 
 > [!IMPORTANT]
 > 📱 **TESTERS WANTED: AnkiMCP for AnkiDroid**
