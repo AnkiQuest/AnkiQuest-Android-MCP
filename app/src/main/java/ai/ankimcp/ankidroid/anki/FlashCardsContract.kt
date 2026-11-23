@@ -6,13 +6,13 @@
  */
 
 /*
- * Vendored from AnkiDroid:
- *   https://github.com/ankidroid/Anki-Android/blob/main/api/src/main/java/com/ichi2/anki/FlashCardsContract.kt
- *   upstream commit 9b4bd9525c3e7b1721493d9fdef8ca30c4e12957 (2026-10-03)
- * Modifications: package renamed; the api module's BuildConfig.AUTHORITY and
- * BuildConfig.READ_WRITE_PERMISSION are inlined with their release values; the
- * import of com.ichi2.anki.api.Ease (only referenced from KDoc) is removed.
- * See NOTICE.
+ * Vendored from AnkiQuest's AnkiDroid fork (AnkiQuest/AnkiQuest-Android):
+ *   https://github.com/AnkiQuest/AnkiQuest-Android/blob/master/api/src/main/java/com/ichi2/anki/FlashCardsContract.kt
+ *   fork commit bd339154fb535bfd386f0811711f9fae07c8de0a (2026-11-18)
+ * Modifications: package renamed; the api module's BuildConfig.ANKI_PACKAGE_NAME
+ * is inlined with the release value "com.ichi2.anki"; the imports of
+ * com.ichi2.anki.api.BuildConfig and com.ichi2.anki.api.Ease (only referenced
+ * from KDoc) are removed. See NOTICE.
  */
 package ai.ankimcp.ankidroid.anki
 
@@ -104,14 +104,28 @@ import android.net.Uri
  * operations on this provider throw [IllegalStateException].
  */
 public object FlashCardsContract {
+    /** For when dealing with parallel builds (.A, .B, etc.) */
+    public fun getAuthority(ankiPackageName: String = "com.ichi2.anki"): String = "$ankiPackageName.flashcards"
+
+    public fun getPermission(ankiPackageName: String = "com.ichi2.anki"): String =
+        "$ankiPackageName.permission.READ_WRITE_DATABASE"
+
+    public fun getAuthorityUri(authority: String = getAuthority()): Uri = Uri.parse("content://$authority")
+
+    /**
+     *  This assumes the default release/debug build package name. Use [getAuthority] and [getPermission] when working with parallel builds
+     */
     public const val AUTHORITY: String = "com.ichi2.anki.flashcards"
     public const val READ_WRITE_PERMISSION: String = "com.ichi2.anki.permission.READ_WRITE_DATABASE"
 
     /**
      * A content:// style uri to the authority for the flash card provider
+     *
+     * This uri assumes the default release-build package name.
+     * Use [getAuthorityUri] and [getPermission] for parallel builds (.A, .B, etc.)
      */
     @JvmField // required for Java API
-    public val AUTHORITY_URI: Uri = Uri.parse("content://$AUTHORITY")
+    public val AUTHORITY_URI: Uri = getAuthorityUri()
 
     /**
      * The Notes can be accessed by
@@ -208,6 +222,8 @@ public object FlashCardsContract {
      * ```
      */
     public object Note {
+        public const val CONTENT_URI_SEGMENT: String = "notes"
+
         /**
          * The content:// style URI for notes. If the it is appended by the note's ID, this
          * note can be directly accessed, e.g.
@@ -229,14 +245,20 @@ public object FlashCardsContract {
          * For examples on how to use the URI for queries see class description.
          */
         @JvmField // required for Java API
-        public val CONTENT_URI: Uri = Uri.withAppendedPath(AUTHORITY_URI, "notes")
+        public val CONTENT_URI: Uri = Uri.withAppendedPath(AUTHORITY_URI, CONTENT_URI_SEGMENT)
+
+        public fun getContentUri(authority: Uri): Uri = Uri.withAppendedPath(authority, CONTENT_URI_SEGMENT)
+
+        public const val CONTENT_URI_V2_SEGMENT: String = "notes_v2"
 
         /**
          * The content:// style URI for notes, but with a direct SQL query to the notes table instead of accepting
          * a query in the libanki browser search syntax like the main URI #CONTENT_URI does.
          */
         @JvmField // required for Java API
-        public val CONTENT_URI_V2: Uri = Uri.withAppendedPath(AUTHORITY_URI, "notes_v2")
+        public val CONTENT_URI_V2: Uri = Uri.withAppendedPath(AUTHORITY_URI, CONTENT_URI_V2_SEGMENT)
+
+        public fun getContentUriV2(authority: Uri): Uri = Uri.withAppendedPath(authority, CONTENT_URI_V2_SEGMENT)
 
         /**
          * This is the ID of the note. It is the same as the note ID in Anki. This ID can be
@@ -378,12 +400,17 @@ public object FlashCardsContract {
      * ```
      */
     public object Model {
+        public const val CONTENT_URI_SEGMENT: String = "models"
+
         /**
          * The content:// style URI for note type. If the it is appended by the note type's ID, this
          * note can be directly accessed. See class description above for further details.
          */
         @JvmField // required for Java API
-        public val CONTENT_URI: Uri = Uri.withAppendedPath(AUTHORITY_URI, "models")
+        public val CONTENT_URI: Uri = Uri.withAppendedPath(AUTHORITY_URI, CONTENT_URI_SEGMENT)
+
+        public fun getContentUri(authority: Uri): Uri = Uri.withAppendedPath(authority, CONTENT_URI_SEGMENT)
+
         public const val CURRENT_MODEL_ID: String = "current"
 
         /**
@@ -616,6 +643,8 @@ public object FlashCardsContract {
      * ```
      */
     public object Card {
+        public const val CONTENT_URI_SEGMENT: String = "cards"
+
         /**
          * The ID of the card in the Anki database.
          */
@@ -951,7 +980,9 @@ public object FlashCardsContract {
          * for all other requested columns. Rows already loaded may still contain the earlier values.
          */
         @JvmField // required for Java API
-        public val CONTENT_URI: Uri = Uri.withAppendedPath(AUTHORITY_URI, "cards")
+        public val CONTENT_URI: Uri = Uri.withAppendedPath(AUTHORITY_URI, CONTENT_URI_SEGMENT)
+
+        public fun getContentUri(authority: Uri): Uri = Uri.withAppendedPath(authority, CONTENT_URI_SEGMENT)
 
         /**
          * Default columns returned by queries.
@@ -1094,8 +1125,12 @@ public object FlashCardsContract {
      * ```
      */
     public object ReviewInfo {
+        public const val CONTENT_URI_SEGMENT: String = "schedule"
+
         @JvmField // required for Java API
-        public val CONTENT_URI: Uri = Uri.withAppendedPath(AUTHORITY_URI, "schedule")
+        public val CONTENT_URI: Uri = Uri.withAppendedPath(AUTHORITY_URI, CONTENT_URI_SEGMENT)
+
+        public fun getContentUri(authority: Uri): Uri = Uri.withAppendedPath(authority, CONTENT_URI_SEGMENT)
 
         /**
          * This is the ID of the note that this card belongs to (i.e. [Note._ID]).
@@ -1262,11 +1297,19 @@ public object FlashCardsContract {
      * ```
      */
     public object Deck {
-        @JvmField // required for Java API
-        public val CONTENT_ALL_URI: Uri = Uri.withAppendedPath(AUTHORITY_URI, "decks")
+        public const val CONTENT_ALL_URI_SEGMENT: String = "decks"
 
         @JvmField // required for Java API
-        public val CONTENT_SELECTED_URI: Uri = Uri.withAppendedPath(AUTHORITY_URI, "selected_deck")
+        public val CONTENT_ALL_URI: Uri = Uri.withAppendedPath(AUTHORITY_URI, CONTENT_ALL_URI_SEGMENT)
+
+        public fun getContentAllUri(authority: Uri): Uri = Uri.withAppendedPath(authority, CONTENT_ALL_URI_SEGMENT)
+
+        public const val CONTENT_SELECTED_URI_SEGMENT: String = "selected_deck"
+
+        @JvmField // required for Java API
+        public val CONTENT_SELECTED_URI: Uri = Uri.withAppendedPath(AUTHORITY_URI, CONTENT_SELECTED_URI_SEGMENT)
+
+        public fun getContentSelectedUri(authority: Uri): Uri = Uri.withAppendedPath(authority, CONTENT_SELECTED_URI_SEGMENT)
 
         /**
          * The name of the Deck
@@ -1341,11 +1384,15 @@ public object FlashCardsContract {
      * ```
      */
     public object AnkiMedia {
+        public const val CONTENT_URI_SEGMENT: String = "media"
+
         /**
          * Content Uri for the MEDIA row of the CardContentProvider
          */
         @JvmField // required for Java API
-        public val CONTENT_URI: Uri = Uri.withAppendedPath(AUTHORITY_URI, "media")
+        public val CONTENT_URI: Uri = Uri.withAppendedPath(AUTHORITY_URI, CONTENT_URI_SEGMENT)
+
+        public fun getContentUri(authority: Uri): Uri = Uri.withAppendedPath(authority, CONTENT_URI_SEGMENT)
 
         /**
          * Uri.toString() which points to the media file that is to be inserted.
@@ -1353,7 +1400,11 @@ public object FlashCardsContract {
         public const val FILE_URI: String = "file_uri"
 
         /**
-         * The preferred name for the file that will be inserted/copied into collection.media
+         * The preferred filename without an extension for the file inserted/copied into
+         * `collection.media`.
+         *
+         * The returned filename may be normalized or renamed to avoid overwriting different contents.
+         * An existing file with matching filename and contents may be reused.
          */
         public const val PREFERRED_NAME: String = "preferred_name"
     }
