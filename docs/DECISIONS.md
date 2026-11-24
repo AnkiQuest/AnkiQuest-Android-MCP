@@ -944,7 +944,7 @@ gets frozen too.
   `serverInfo.title`. "for AnkiDroid" appears only in descriptive text (Play descriptions,
   README intro, the non-affiliation line) where it says which app it works with. Sentences that
   must tell the two apps apart name both ("Do this for both AnkiMCP and AnkiDroid"). Machine
-  identifiers do not change: package and applicationId `ai.ankimcp.ankidroid`, the repo
+  identifiers do not change: package and applicationId `org.ankiquest.ankimcp`, the repo
   `ankimcp/ankidroid-mcp`, `serverInfo.name` "ankidroid-mcp", notification channel ids,
   signing and CI secret names, and URLs (including `ankimcp.ai/docs/ankidroid-mcp`).
 
@@ -1474,8 +1474,8 @@ computer on the same Wi-Fi; claude.ai cannot reach a LAN address. Code in `local
   `prompts/list`, `prompts/get`, `resources/list` and `resources/read` in FastMCP's shapes
   (checked against the add-on's vendored SDK) and advertises `prompts` and `resources`
   capabilities when any are registered. `twenty_rules_content.md` is copied byte for byte into
-  `src/main/resources/ai/ankimcp/ankidroid/prompts/` and loaded by the absolute path
-  `/ai/ankimcp/ankidroid/prompts/...`: R8 renames and repackages `AddonPrompts` while Java
+  `src/main/resources/org/ankiquest/ankimcp/prompts/` and loaded by the absolute path
+  `/org/ankiquest/ankimcp/prompts/...`: R8 renames and repackages `AddonPrompts` while Java
   resources keep their path, so a name relative to the class's package would be missing in
   release builds (a JVM test loads the files through a class in another package);
   `query_syntax.json` holds the add-on's dict as `json.dumps(indent=2)`
@@ -1788,7 +1788,7 @@ computer on the same Wi-Fi; claude.ai cannot reach a LAN address. Code in `local
     that only products, purchases and launch are called).
   - Products: `ankimcp_plus` (tier plus) and `ankimcp_pro` (tier pro), each with two
     auto-renewing base plans, `monthly` (P1M) and `yearly` (P1Y), package
-    `ai.ankimcp.ankidroid`, no trial. A sellable item is (product, base plan):
+    `org.ankiquest.ankimcp`, no trial. A sellable item is (product, base plan):
     `SubscriptionProduct` carries `basePlanId`, and the catalog holds one item per base plan
     Play returns. Each item is the base plan's own offer (the one without an `offerId`), plus at
     most one promotional offer (below); no other offer is ever used. A product Play does not
@@ -1992,7 +1992,7 @@ computer on the same Wi-Fi; claude.ai cannot reach a LAN address. Code in `local
     `cancelAtPeriodEnd`), or "Payment problem: renew it in Google Play" (grace, which wins),
     the current product as a disabled "Current plan" and the other as "Switch to <tier>", and
     Manage subscription opening
-    `https://play.google.com/store/account/subscriptions?sku=<productId>&package=ai.ankimcp.ankidroid`
+    `https://play.google.com/store/account/subscriptions?sku=<productId>&package=org.ankiquest.ankimcp`
     (`ACTION_VIEW`, so the Play Store app handles it). google_play without a `productId`
     (Play billing off on that server) shows the tier and dates only. admin: "Granted to your
     account", no buttons. polar, paddle or an unknown provider: "managed on the web", no

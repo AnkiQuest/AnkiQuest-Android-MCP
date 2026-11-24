@@ -3,14 +3,14 @@
 # AnkiMCP
 
 Android app (Kotlin, Compose) that serves MCP over the AnkiMCP tunnel relay and reads AnkiDroid
-through its ContentProvider. Single `app` module, package `ai.ankimcp.ankidroid`.
+through its ContentProvider. Single `app` module, package `org.ankiquest.ankimcp`.
 
 ## Commands
 
 ```sh
 ./gradlew :app:assembleDebug
 ./gradlew :app:testDebugUnitTest
-./gradlew :app:testDebugUnitTest --tests 'ai.ankimcp.ankidroid.tunnel.TunnelClientTest'
+./gradlew :app:testDebugUnitTest --tests 'org.ankiquest.ankimcp.tunnel.TunnelClientTest'
 ./gradlew :app:lintDebug
 ./gradlew :app:assembleRelease                                   # R8, unsigned
 ./gradlew :app:assembleDebug -Pankimcp.tunnelUrl=wss://ankidroid.ankimcp.uk -Pankimcp.authUrl=https://auth.ankimcp.uk/realms/ankimcp   # dev relay + dev Keycloak; tunnelUrl alone fails (D64)
@@ -24,7 +24,7 @@ see README); without it the google-services plugin is skipped and push is unavai
 ## Layout
 
 ```
-app/src/main/java/ai/ankimcp/ankidroid/
+app/src/main/java/org/ankiquest/ankimcp/
   AnkiMcpApp.kt, AppGraph.kt   manual DI; AppGraph owns the long-lived objects
   config/      AppConfig (BuildConfig.TUNNEL_URL, AUTH_URL = Keycloak realm base, version)
   settings/    ConnectionSettings (IdleWindow 15/30/60; drops the old connection_mode and
@@ -80,7 +80,7 @@ app/src/main/java/ai/ankimcp/ankidroid/
                WriteProgress "did N of M"), PatchHelpers (exactly-once patch), AnkiTags (rslib
                tag rules). Registered in AppGraph.ankiTools
   prompts/     AddonPrompts: review_session, twenty_rules, anki://query-syntax (texts under
-               src/main/resources/ai/ankimcp/ankidroid/prompts/)
+               src/main/resources/org/ankiquest/ankimcp/prompts/)
   service/     TunnelForegroundService (specialUse FGS; also runs while the local server is on),
                NetworkMonitor, WifiMonitor (Wi-Fi IPv4 address for the local server),
                ScreenMonitor (screen off/on broadcasts), FreezingOem (OEM skins that freeze apps),
