@@ -20,7 +20,7 @@ libraries.
 | `com.ichi2.anki.permission.READ_WRITE_DATABASE` | runtime (AnkiDroid's own, dangerous level) | Read decks through AnkiDroid's ContentProvider | none in Play Console; explain in the listing (done) |
 | `com.android.vending.BILLING` | normal (declared by the app and by the Play Billing Library) | Plus and Pro subscriptions through Google Play (D62). The library also adds `<queries>` for Play's billing service and its own non-exported `ProxyBillingActivity`; no location or other permission comes with it (merged release manifest checked) | none; the subscriptions are set up under Monetize in Play Console |
 | `com.google.android.c2dm.permission.RECEIVE` | normal (from firebase-messaging) | Receive FCM wake-up messages | none |
-| `ai.ankimcp.ankidroid.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION` | signature (from androidx.core) | Internal guard for non-exported runtime receivers; no user impact | none |
+| `org.ankiquest.ankimcp.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION` | signature (from androidx.core) | Internal guard for non-exported runtime receivers; no user impact | none |
 
 Not requested, on purpose: `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` (D42: Play forbids the
 direct request for apps that can use high-priority FCM; the battery card only links to the

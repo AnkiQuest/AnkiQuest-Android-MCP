@@ -1,0 +1,279 @@
+package org.ankiquest.ankimcp.push
+
+import org.ankiquest.ankimcp.log.TunnelLog
+import org.ankiquest.ankimcp.service.REMOTE_ACCESS_OFF_REASON
+import org.ankiquest.ankimcp.service.SERVICE_START_BLOCKED_REASON
+import org.ankiquest.ankimcp.tunnel.CloseCodes
+import org.ankiquest.ankimcp.tunnel.TunnelState
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+@OptIn(ExperimentalCoroutinesApi::class)
+class WakeHandlerTest {
+    private class RecordingNotifier : SignInNotifier {
+        var shown = 0
+
+        override fun showSignInRequired() {
+            shown++
+        }
+
+        override fun dismiss() = Unit
+    }
+
+    private val wake = mapOf("type" to "wake", "reason" to "mcp_request")
+    private val tunnelState = MutableStateFlow<TunnelState>(TunnelState.Idle)
+    private var running = false
+    private var signedIn = true
+    private var signingOut = false
+    private var remoteEnabled = true
+    private var serviceStartAllowed = true
+    private var onServiceStart: () -> Unit = {}
+    private var serviceStarts = 0
+    private var tunnelStarts = 0
+    private var tunnelStops = 0
+    private var nudges = 0
+    private val calls = mutableListOf<String>()
+    private var stateAtServiceStart: TunnelState? = null
+
+    /** What the tunnel's onPushWake returns: false when the run ended between the checks. */
+    private var runningTunnelAnswers = true
+    private val notifier = RecordingNotifier()
+    private val log = TunnelLog(mirrorToLogcat = false)
+
+    private fun TestScope.handler() = WakeHandler(
+        scope = backgroundScope,
+        tunnelState = tunnelState,
+        isTunnelRunning = { running },
+        isSignedIn = { signedIn },
+        isSigningOut = { signingOut },
+        isRemoteEnabled = { remoteEnabled },
+        startService = {
+            serviceStarts++
+            calls += "service"
+            stateAtServiceStart = tunnelState.value
+            onServiceStart()
+            serviceStartAllowed
+        },
+        startTunnel = {
+            tunnelStarts++
+            calls += "tunnel"
+            running = true
+            tunnelState.value = TunnelState.Connecting(0)
+        },
+        stopTunnel = { reason ->
+            tunnelStops++
+            running = false
+            tunnelState.value = TunnelState.Stopped(CloseCodes.NORMAL, reason)
+        },
+        wakeRunningTunnel = {
+            nudges++
+            runningTunnelAnswers
+        },
+        notifier = notifier,
+        log = log,
+    )
+
+    @Test
+    fun `a session that looks open is revived, not left alone`() = runTest {
+        running = true
+        tunnelState.value = TunnelState.Connected("https://tunnel.example/mcp")
+
+        assertEquals(WakeHandler.Outcome.Reconnected, handler().onMessage(wake))
+
+        assertEquals(0, serviceStarts)
+        assertEquals(0, tunnelStarts)
+        assertEquals(1, nudges)
+    }
+
+    @Test
+    fun `a run that ends between the running check and the revive is started again`() = runTest {
+        running = true
+        tunnelState.value = TunnelState.Connected("https://tunnel.example/mcp")
+        // A freeze stop got in after isTunnelRunning() said true.
+        runningTunnelAnswers = false
+
+        assertEquals(WakeHandler.Outcome.Started, handler().onMessage(wake))
+
+        assertEquals(1, nudges)
+        assertEquals(1, serviceStarts)
+        assertEquals(1, tunnelStarts)
+    }
+
+    @Test
+    fun `a tunnel waiting to reconnect is nudged instead of restarted`() = runTest {
+        running = true
+        tunnelState.value = TunnelState.Reconnecting(attempt = 4, delayMs = 16_000, lastError = "1001")
+
+        assertEquals(WakeHandler.Outcome.Nudged, handler().onMessage(wake))
+
+        assertEquals(1, nudges)
+        assertEquals(0, serviceStarts)
+    }
+
+    @Test
+    fun `no session starts the foreground service and the tunnel`() = runTest {
+        val outcome = handler().onMessage(wake)
+        tunnelState.value = TunnelState.Connected("https://tunnel.example/mcp")
+        runCurrent()
+
+        assertEquals(WakeHandler.Outcome.Started, outcome)
+        assertEquals(1, serviceStarts)
+        assertEquals(1, tunnelStarts)
+        assertEquals(0, tunnelStops)
+        assertEquals(0, notifier.shown)
+    }
+
+    @Test
+    fun `a dead refresh token posts the sign-in notification`() = runTest {
+        val outcome = handler().onMessage(wake)
+        runCurrent()
+        // What TunnelConnection publishes when the refresh before connecting gets invalid_grant.
+        tunnelState.value = TunnelState.Stopped(0, "Session expired, please sign in again", reloginRequired = true)
+        runCurrent()
+
+        assertEquals(WakeHandler.Outcome.Started, outcome)
+        assertEquals(1, notifier.shown)
+    }
+
+    @Test
+    fun `a woken run that finds no credentials posts nothing`() = runTest {
+        handler().onMessage(wake)
+        runCurrent()
+        // Signed out between the check and the attempt: not an expired session.
+        tunnelState.value = TunnelState.Stopped(0, "Not signed in", reloginRequired = true, signedOut = true)
+        runCurrent()
+
+        assertEquals(0, notifier.shown)
+    }
+
+    @Test
+    fun `a failure that does not need sign-in posts nothing`() = runTest {
+        handler().onMessage(wake)
+        runCurrent()
+        tunnelState.value = TunnelState.Stopped(CloseCodes.SESSION_REPLACED, "Another device connected")
+        runCurrent()
+
+        assertEquals(0, notifier.shown)
+    }
+
+    @Test
+    fun `the outcome watch gives up after its timeout`() = runTest {
+        handler().onMessage(wake)
+        advanceTimeBy(WakeHandler.WATCH_TIMEOUT_MS + 1)
+        tunnelState.value = TunnelState.Stopped(0, "Session expired", reloginRequired = true)
+        runCurrent()
+
+        assertEquals(0, notifier.shown)
+    }
+
+    @Test
+    fun `signed out logs, posts nothing and does not connect`() = runTest {
+        signedIn = false
+
+        assertEquals(WakeHandler.Outcome.NotSignedIn, handler().onMessage(wake))
+
+        assertEquals("a deliberate sign-out is not an expired session", 0, notifier.shown)
+        assertEquals(0, serviceStarts)
+        assertEquals(0, tunnelStarts)
+        val messages = log.entries.value.map { it.message }
+        assertTrue(messages.toString(), messages.contains("Wake-up (mcp_request): not signed in, not connecting"))
+    }
+
+    @Test
+    fun `a wake-up during sign-out does not restart the tunnel`() = runTest {
+        // Logout has started; credentials still exist while the DELETE is in flight.
+        signingOut = true
+
+        assertEquals(WakeHandler.Outcome.SigningOut, handler().onMessage(wake))
+
+        assertEquals(0, serviceStarts)
+        assertEquals(0, tunnelStarts)
+        assertEquals(0, notifier.shown)
+    }
+
+    @Test
+    fun `a logout that begins after the signing-out check stops the run the wake-up started`() = runTest {
+        // beginLogout() lands between the entry check and the check after starting.
+        onServiceStart = { signingOut = true }
+
+        assertEquals(WakeHandler.Outcome.SigningOut, handler().onMessage(wake))
+        runCurrent()
+
+        assertEquals(1, tunnelStarts)
+        assertEquals(1, tunnelStops)
+        assertFalse(running)
+        assertEquals(0, notifier.shown)
+        val messages = log.entries.value.map { it.message }
+        assertTrue(messages.toString(), messages.contains("Wake-up (mcp_request): signing out, disconnecting"))
+    }
+
+    @Test
+    fun `the tunnel starts before the service so the service never sees the previous run's stop`() = runTest {
+        tunnelState.value = TunnelState.Stopped(CloseCodes.NORMAL, "Screen turned off", phoneAsleep = true)
+
+        assertEquals(WakeHandler.Outcome.Started, handler().onMessage(wake))
+
+        assertEquals(listOf("tunnel", "service"), calls)
+        assertTrue(stateAtServiceStart is TunnelState.Connecting)
+    }
+
+    @Test
+    fun `a refused service start stops the run it started`() = runTest {
+        serviceStartAllowed = false
+
+        assertEquals(WakeHandler.Outcome.StartBlocked, handler().onMessage(wake))
+
+        assertEquals(1, serviceStarts)
+        assertEquals(1, tunnelStarts)
+        assertEquals(1, tunnelStops)
+        assertFalse(running)
+        assertEquals(SERVICE_START_BLOCKED_REASON, (tunnelState.value as TunnelState.Stopped).reason)
+    }
+
+    @Test
+    fun `with Remote access off a wake-up is ignored, even signed in with a stale run`() = runTest {
+        remoteEnabled = false
+        running = true
+        tunnelState.value = TunnelState.Connected("https://tunnel.example/mcp")
+
+        assertEquals(WakeHandler.Outcome.RemoteOff, handler().onMessage(wake))
+
+        assertEquals(0, serviceStarts)
+        assertEquals(0, tunnelStarts)
+        assertEquals(0, nudges)
+        assertEquals(0, notifier.shown)
+        val messages = log.entries.value.map { it.message }
+        assertTrue(messages.toString(), messages.contains("Wake-up (mcp_request): Remote access is off, not connecting"))
+    }
+
+    @Test
+    fun `Remote access turned off after the entry check stops the run the wake-up started`() = runTest {
+        // The switch's own stop found nothing running: it landed between the check and startTunnel.
+        onServiceStart = { remoteEnabled = false }
+
+        assertEquals(WakeHandler.Outcome.RemoteOff, handler().onMessage(wake))
+        runCurrent()
+
+        assertEquals(1, tunnelStarts)
+        assertEquals(1, tunnelStops)
+        assertFalse(running)
+        assertEquals(REMOTE_ACCESS_OFF_REASON, (tunnelState.value as TunnelState.Stopped).reason)
+        assertEquals(0, notifier.shown)
+    }
+
+    @Test
+    fun `other message types are ignored`() = runTest {
+        val outcome = handler().onMessage(mapOf("type" to "something_else"))
+
+        assertEquals(WakeHandler.Outcome.Ignored, outcome)
+        assertTrue(serviceStarts == 0 && tunnelStarts == 0 && notifier.shown == 0)
+    }
+}

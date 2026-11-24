@@ -10,7 +10,7 @@ The local Wi-Fi server (no relay, no account) is a separate transport for the sa
 described in [Local HTTP transport](#local-http-transport-wi-fi-no-relay); it is not part of
 the tunnel protocol.
 
-Code: `app/src/main/java/ai/ankimcp/ankidroid/tunnel/Protocol.kt`, `TunnelClient.kt`,
+Code: `app/src/main/java/org/ankiquest/ankimcp/tunnel/Protocol.kt`, `TunnelClient.kt`,
 `TunnelConnection.kt`, `ReconnectPolicy.kt`, `auth/DeviceFlowClient.kt`, `mcp/McpServer.kt`,
 `push/PushTokenRegistrar.kt`, `push/WakeHandler.kt`, `billing/BillingApi.kt`, and for the local
 server `local/`. Plans and Google Play purchases (HTTP only, no tunnel frames) are in

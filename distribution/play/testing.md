@@ -23,7 +23,7 @@ Send this to every tester (email or forum DM) after they are on the list.
 ```
 Thanks for testing AnkiMCP. Takes about 10 minutes to set up, then just use it normally for two weeks.
 
-1. Join the test: open https://play.google.com/apps/testing/ai.ankimcp.ankidroid on your phone (same Google account you gave me), tap "Become a tester", then install from the Play Store link on that page. If you installed the APK from GitHub before, uninstall it first.
+1. Join the test: open https://play.google.com/apps/testing/org.ankiquest.ankimcp on your phone (same Google account you gave me), tap "Become a tester", then install from the Play Store link on that page. If you installed the APK from GitHub before, uninstall it first.
 2. Make sure AnkiDroid is installed and opened once. In AnkiDroid: Settings > Advanced > "Enable AnkiDroid API" must be on (it is by default).
 3. Open AnkiMCP, allow access to AnkiDroid, then on the Status tab under Remote tap Sign in, check the code matches in the browser and approve with your AnkiMCP account. On Android 13+ allow notifications.
 4. On the Status tab tap Copy URL. In Claude (web or app): Settings > Connectors > Add custom connector, paste the URL, sign in with the same AnkiMCP account.
@@ -98,7 +98,7 @@ Reply here or DM me with the Google account email (or join the Google Group: <GR
      promote the internal release), release notes from `distribution/whatsnew/whatsnew-en-US`,
      Save > Review > Start rollout to Closed testing. Then Publishing overview > Send for review.
 6. **Share the opt-in link** once review passes (Closed testing > Testers > "Copy link"):
-   `https://play.google.com/apps/testing/ai.ankimcp.ankidroid`. Testers must open it with the
+   `https://play.google.com/apps/testing/org.ankiquest.ankimcp`. Testers must open it with the
    listed Google account and tap "Become a tester".
 7. **Keep it going for 14 days.** Watch Dashboard > "Closed test" progress (testers opted in,
    days). Ship at least one update during the test if anything is fixed (counts as "changes
