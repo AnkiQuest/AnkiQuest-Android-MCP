@@ -67,7 +67,7 @@ see docs/DECISIONS.md D57 and D58.
 
 - Google Play: coming soon.
 - GitHub: download `ankidroid-mcp-<version>.apk` and `SHA256SUMS.txt` from
-  [Releases](https://github.com/ankimcp/ankidroid-mcp/releases), check the file, then open
+  [Releases](https://github.com/AnkiQuest/AnkiQuest-Android-MCP/releases), check the file, then open
   the APK on the phone:
 
   ```sh
