@@ -70,11 +70,11 @@ if (providers.gradleProperty("ankimcp.tunnelUrl").isPresent &&
 }
 
 android {
-    namespace = "ai.ankimcp.ankidroid"
+    namespace = "org.ankiquest.ankimcp"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "ai.ankimcp.ankidroid"
+        applicationId = "org.ankiquest.ankimcp"
         minSdk = 26
         targetSdk = 36
         versionCode = appVersionCode

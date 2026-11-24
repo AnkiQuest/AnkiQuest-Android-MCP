@@ -120,7 +120,7 @@ now invited like a user:
 ### First upload is manual
 
 The Play API cannot create an app or its first release. Create the app in Play Console with
-package `ai.ankimcp.ankidroid`, enroll in Play App Signing, then upload the first AAB from the
+package `org.ankiquest.ankimcp`, enroll in Play App Signing, then upload the first AAB from the
 GitHub Release by hand (Test and release > Testing > Internal testing > Create new release) and
 roll it out. Until then the play job fails with "Package not found". While the app is still a
 draft app (nothing rolled out on any track) the API also refuses `status: completed`; rolling
