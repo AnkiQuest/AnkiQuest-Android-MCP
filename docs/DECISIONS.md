@@ -2322,26 +2322,6 @@ computer on the same Wi-Fi; claude.ai cannot reach a LAN address. Code in `local
     certificate accepted when debuggable; rotated key with the release key in its history).
     The PackageManager adapter is not JVM-tested.
 
-## Released AnkiQuest package
-
-- **D67. The package released AnkiQuest builds install as is a third known flashcard app.**
-  Released AnkiQuest builds (release 23, nightly 88) install as `com.ichi2.anki.quest`, with
-  authority `com.ichi2.anki.quest.flashcards` and permission
-  `com.ichi2.anki.quest.permission.READ_WRITE_DATABASE`. The move to `org.ankiquest.ankidroid`
-  (AnkiQuest-Android#420) waits for a bridge release, so D65 alone found no AnkiQuest on
-  users' phones.
-  - `FlashcardApp.ANKIQUEST_RELEASED` names that package, with the same rules as `ANKIQUEST`
-    (D65): a candidate when it holds its own authority, used only after the user picks it, its
-    certificates pinned on the pick. With both AnkiQuest packages installed the picker lists
-    both and the user's choice decides, as for any candidates.
-  - Its permission, package and authority are in the manifest, checked by
-    `FlashcardAppManifestTest`.
-  - The AnkiQuest API library lists the same package the same way (`ANKIQUEST_OLD_PACKAGE`,
-    AnkiQuest-Android#444).
-  - Remove the entry, its manifest lines and this decision once #420's move is done.
-  - Tests (JVM): `FlashcardAppResolverTest` (released AnkiQuest only, its changed certificate,
-    both AnkiQuest packages installed).
-
 ## Not done
 
 - D62 (Google Play Billing): JVM-tested only, with fake Play and MockWebServer. Not yet run
