@@ -22,6 +22,17 @@ enum class FlashcardApp(val packageName: String, val authority: String, val perm
         "org.ankiquest.ankidroid.permission.READ_WRITE_DATABASE",
         "AnkiQuest",
     ),
+
+    /**
+     * The package released AnkiQuest builds install as today, trusted like [ANKIQUEST] (D67).
+     * Remove once its users have moved to `org.ankiquest.ankidroid` (AnkiQuest-Android#420).
+     */
+    ANKIQUEST_RELEASED(
+        "com.ichi2.anki.quest",
+        "com.ichi2.anki.quest.flashcards",
+        "com.ichi2.anki.quest.permission.READ_WRITE_DATABASE",
+        "AnkiQuest",
+    ),
     ;
 
     companion object {
@@ -124,7 +135,7 @@ class FlashcardAppResolver(
         }
         val pin = when (app) {
             FlashcardApp.ANKIDROID -> null
-            FlashcardApp.ANKIQUEST ->
+            FlashcardApp.ANKIQUEST, FlashcardApp.ANKIQUEST_RELEASED ->
                 installed.signerDigests(app.packageName) ?: return false
         }
         choice.save(app, pin)
@@ -158,7 +169,7 @@ class FlashcardAppResolver(
     private fun isCandidate(app: FlashcardApp): Boolean = when (app) {
         // Authority holder and release key, checked together (D66).
         FlashcardApp.ANKIDROID -> ankiDroid.trust() == ProviderTrust.Trusted
-        FlashcardApp.ANKIQUEST ->
+        FlashcardApp.ANKIQUEST, FlashcardApp.ANKIQUEST_RELEASED ->
             installed.signerDigests(app.packageName) != null && installed.authorityHolder(app.authority) == app.packageName
     }
 

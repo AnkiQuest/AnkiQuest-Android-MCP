@@ -8,18 +8,22 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
-    <!-- The known flashcard apps (FlashcardApp, D65): AnkiDroid and AnkiQuest. -->
+    <!-- The known flashcard apps (FlashcardApp, D65): AnkiDroid and AnkiQuest, released AnkiQuest
+         under com.ichi2.anki.quest until AnkiQuest-Android#420 has moved its users (D67). -->
     <uses-permission android:name="com.ichi2.anki.permission.READ_WRITE_DATABASE" />
     <uses-permission android:name="org.ankiquest.ankidroid.permission.READ_WRITE_DATABASE" />
+    <uses-permission android:name="com.ichi2.anki.quest.permission.READ_WRITE_DATABASE" />
     <!-- Google Play subscriptions (D62). The billing library declares it too; explicit for review. -->
     <uses-permission android:name="com.android.vending.BILLING" />
 
     <queries>
         <package android:name="com.ichi2.anki" />
         <package android:name="org.ankiquest.ankidroid" />
+        <package android:name="com.ichi2.anki.quest" />
         <!-- The authorities too, so the holder check sees whichever app holds one, not only the known packages. -->
         <provider android:authorities="com.ichi2.anki.flashcards" />
         <provider android:authorities="org.ankiquest.ankidroid.flashcards" />
+        <provider android:authorities="com.ichi2.anki.quest.flashcards" />
     </queries>
 
     <application
