@@ -25,7 +25,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Resolve version and verify tag
         run: python3 .github/scripts/resolve_version.py --expect-tag "$GITHUB_REF_NAME"
@@ -36,24 +38,28 @@ jobs:
     needs: version-gate
     timeout-minutes: 30
     permissions:
-      contents: write
+      contents: write # creates the GitHub Release
 
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       # Re-checked rather than assumed from version-gate, before anything is published.
       - name: Resolve version and verify tag
         id: version
         run: python3 .github/scripts/resolve_version.py --expect-tag "$GITHUB_REF_NAME"
 
-      - uses: actions/setup-java@v6
+      - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
         with:
           distribution: temurin
           java-version: '17'
 
-      - uses: gradle/actions/setup-gradle@v6
+      # No Gradle cache: a release is built from a clean cache, so nothing a
+      # cache entry holds can reach the signed files.
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
         with:
-          cache-provider: basic
+          cache-disabled: true
 
       # A release must be signed: with any signing secret missing the job stops here instead
       # of Gradle quietly building unsigned. The keystore is binary, so there is nothing
@@ -107,7 +113,7 @@ jobs:
 
       - name: Verify signatures
         run: |
-          apksigner="$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -n1)apksigner"
+          apksigner="$(printf '%s\n' "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -n1)apksigner"
           "$apksigner" verify --verbose --print-certs app/build/outputs/apk/release/app-release.apk
           # jarsigner -verify exits 0 on an unsigned jar too; only "jar verified." means signed.
           jarsigner -verify app/build/outputs/bundle/release/app-release.aab | tee /dev/stderr | grep -q "jar verified."
@@ -125,7 +131,7 @@ jobs:
 
       # Handed to the play job so Play upload can be re-run on its own.
       - name: Upload bundle for Play
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: play-bundle
           path: |
@@ -133,8 +139,10 @@ jobs:
             app/build/outputs/mapping/release/mapping.txt
           if-no-files-found: error
 
+      # Kept over `gh release`: its overwrite_files: false re-run handling
+      # would otherwise need rewriting in a script.
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v3
+        uses: softprops/action-gh-release@8a0cd651e5b2365bd640854a3fa5dfc70e4875f3 # v3.0.4 # zizmor: ignore[superfluous-actions]
         with:
           files: |
             dist/ankidroid-mcp-${{ github.ref_name }}.apk
@@ -169,14 +177,16 @@ jobs:
         if: env.HAS_PLAY_ACCOUNT != 'true'
         run: echo "PLAY_SERVICE_ACCOUNT_JSON not set; skipping Play upload"
 
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
         if: env.HAS_PLAY_ACCOUNT == 'true'
 
       - name: Resolve version and verify tag
         if: env.HAS_PLAY_ACCOUNT == 'true'
         run: python3 .github/scripts/resolve_version.py --expect-tag "$GITHUB_REF_NAME"
 
-      - uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         if: env.HAS_PLAY_ACCOUNT == 'true'
         with:
           name: play-bundle
@@ -192,7 +202,7 @@ jobs:
       # they are uploaded; without the directory the action only warns and Play shows no notes.
       - name: Upload AAB to internal track
         if: env.HAS_PLAY_ACCOUNT == 'true'
-        uses: r0adkll/upload-google-play@v1
+        uses: r0adkll/upload-google-play@e738b9dd8f2476ea806d921b64aacd24f34515a5 # v1.1.5
         with:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
           packageName: org.ankiquest.ankimcp
