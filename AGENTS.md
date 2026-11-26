@@ -205,7 +205,9 @@ AnkiQuest-Android-MCP is a fork of [ankimcp/ankidroid-mcp](https://github.com/an
 
 ## Upstream guidance
 
-From [ankimcp/ankidroid-mcp](https://github.com/ankimcp/ankidroid-mcp)'s CLAUDE.md, kept here so the fork still follows the originating project's own rules where AnkiQuest's do not override them; this job refreshes the wording when upstream changes it.
+[ankimcp/ankidroid-mcp](https://github.com/ankimcp/ankidroid-mcp)'s own instructions, kept verbatim. The rules above override them; where they don't, they apply to upstream's code. AnkiQuest-Sync copies them from the upstream commit `master` last merged; don't edit them here.
+
+<!-- ankimcp/ankidroid-mcp: CLAUDE.md -->
 
 # AnkiMCP
 
